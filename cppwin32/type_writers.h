@@ -172,6 +172,9 @@ namespace cppwin32
         {
             switch (type)
             {
+			case ConstantType::Boolean:
+				write("bool");
+				break;
             case ConstantType::UInt8:
                 write("uint8_t");
                 break;
@@ -215,6 +218,9 @@ namespace cppwin32
         {
             switch (value.Type())
             {
+			case ConstantType::Boolean:
+				write(value.ValueBoolean() ? "true" : "false");
+				break;
             case ConstantType::UInt8:
                 write_value(value.ValueUInt8());
                 break;
@@ -334,6 +340,9 @@ namespace cppwin32
                     {
                     case ElementType::Boolean:
                         write("bool");
+                        break;
+                    case ElementType::Char:
+                        write("char");
                         break;
                     case ElementType::I1:
                         write("int8_t");
