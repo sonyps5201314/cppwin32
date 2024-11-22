@@ -252,7 +252,7 @@ namespace cppwin32
                 write_value(value.ValueFloat64());
                 break;
             case ConstantType::String:
-                write(R"(L"%")", value.ValueString());
+                write(R"d(LR"(%)")d", value.ValueString());
                 break;
             default:
                 throw std::invalid_argument("Unexpected constant type");
