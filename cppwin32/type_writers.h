@@ -29,11 +29,11 @@ namespace cppwin32
         {
             bool operator()(TypeDef const& left, TypeDef const& right) const
             {
-                return left.TypeName() < right.TypeName();
+                return left.TypeDisplayName() < right.TypeDisplayName();
             }
             bool operator()(TypeRef const& left, TypeRef const& right) const
             {
-                return left.TypeName() < right.TypeName();
+                return left.TypeDisplayName() < right.TypeDisplayName();
             }
         };
 
@@ -103,8 +103,11 @@ namespace cppwin32
         void add_extern_depends(TypeRef const& type)
         {
             auto ns = type.TypeNamespace();
-            XLANG_ASSERT(ns != type_namespace);
-            extern_depends[ns].insert(type);
+            //XLANG_ASSERT(ns != type_namespace);
+            if (ns != type_namespace)
+            {
+                extern_depends[ns].insert(type);
+            }
         }
 
         void write_depends(std::string_view const& ns, char impl = 0)
@@ -277,7 +280,7 @@ namespace cppwin32
             add_depends(type);
             if (is_nested(type))
             {
-                write(type.TypeName());
+                write(type.TypeDisplayName());
             }
             else
             {
@@ -285,19 +288,19 @@ namespace cppwin32
                 {
                     write("win32::");
                 }
-                write("@::%", type.TypeNamespace(), type.TypeName());
+                write("@::%", type.TypeNamespace(), type.TypeDisplayName());
             }
         }
 
         void write(TypeRef const& type)
         {
-            if (type.TypeNamespace() == "System" && type.TypeName() == "Guid")
+            if (type.TypeNamespace() == "System" && type.TypeDisplayName() == "Guid")
             {
                 write("::win32::guid");
             }
             else if (is_nested(type))
             {
-                write(type.TypeName());
+                write(type.TypeDisplayName());
             }
             else
             {
@@ -312,7 +315,7 @@ namespace cppwin32
                 {
                     write("win32::");
                 }
-                write("@::%", type.TypeNamespace(), type.TypeName());
+                write("@::%", type.TypeNamespace(), type.TypeDisplayName());
             }
         }
 
@@ -441,4 +444,48 @@ namespace cppwin32
             flush_to_file(filename);
         }
     };
+
+	static void check_for_write_defined_arches__part_head(writer& w, Architecture arches)
+	{
+		if (arches != Architecture::None)
+		{
+			bool has_least_one = false;
+			std::string str;
+			str = "#if ";
+			if (arches & Architecture::X86)
+			{
+				str += "defined(_M_IX86)";
+				has_least_one = true;
+			}
+			if (arches & Architecture::X64)
+			{
+				if (has_least_one)
+				{
+					str += " || ";
+				}
+				str += "defined(_M_AMD64)";
+				has_least_one = true;
+			}
+			if (arches & Architecture::Arm64)
+			{
+				if (has_least_one)
+				{
+					str += " || ";
+				}
+				str += "defined(_M_ARM64)";
+				has_least_one = true;
+			}
+			str += "\r\n";
+			w.write(str);
+		}
+	}
+	static void check_for_write_defined_arches__part_tail(writer& w, Architecture arches)
+	{
+		if (arches != Architecture::None)
+		{
+			auto format = R"(#endif
+)";
+			w.write(format);
+		}
+	}
 }

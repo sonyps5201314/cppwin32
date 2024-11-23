@@ -97,7 +97,7 @@ namespace cppwin32
                     auto param_type_def = find(*index);
                     if (param_type_def && get_category(param_type_def) == category::delegate_type)
                     {
-                        if (type_namespace.empty() || type_namespace == param_type_def.TypeName())
+                        if (type_namespace.empty() || type_namespace == param_type_def.TypeDisplayName())
                         {
                             current->second.add_edge(param_type_def);
                             add_delegate(param_type_def);
@@ -138,10 +138,10 @@ namespace cppwin32
         void visit(value_type& v, Callback c)
         {
 #ifdef _DEBUG
-            auto type_name = v.first.TypeName();
+            auto type_name = v.first.TypeDisplayName();
 #endif
             if (v.second.state == walk_state::complete) return;
-            if (v.second.state == walk_state::walking) throw std::invalid_argument("Cyclic dependency graph encountered at type " + std::string(v.first.TypeNamespace()) + "." + std::string(v.first.TypeName()));
+            if (v.second.state == walk_state::walking) throw std::invalid_argument("Cyclic dependency graph encountered at type " + std::string(v.first.TypeNamespace()) + "." + std::string(v.first.TypeDisplayName()));
 
             v.second.state = walk_state::walking;
             for (auto&& edge : v.second.edges)

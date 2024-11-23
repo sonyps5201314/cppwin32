@@ -165,7 +165,7 @@ namespace cppwin32
 )";
 
         auto fields = type.FieldList();
-        w.write(format, type.TypeName(), fields.first.Signature().Type(), bind_each<write_enum_field>(fields));
+        w.write(format, type.TypeDisplayName(), fields.first.Signature().Type(), bind_each<write_enum_field>(fields));
     }
 
     void write_delegate(writer& w, TypeDef const& type);
@@ -175,7 +175,7 @@ namespace cppwin32
     {
         auto const format = R"(    struct %;
 )";
-        w.write(format, type.TypeName());
+        w.write(format, type.TypeDisplayName());
     }
 
     void write_forward(writer& w, TypeDef const& type)
@@ -198,7 +198,7 @@ namespace cppwin32
         auto format = R"(    % %;
 )";
 
-        w.write(format, type_keyword, type.TypeName());
+        w.write(format, type_keyword, type.TypeDisplayName());
     }
 
     struct struct_field
@@ -254,7 +254,7 @@ namespace cppwin32
     void write_struct(writer& w, TypeDef const& type, int nest_level = 0)
     {
 #ifdef _DEBUG
-        if (type.TypeName() == "EVENT_PROPERTY_INFO")
+        if (type.TypeDisplayName() == "EVENT_PROPERTY_INFO")
         {
             type.TypeNamespace();
         }
@@ -263,7 +263,7 @@ namespace cppwin32
         std::string_view const type_keyword = is_union(type) ? "union" : "struct";
         w.write(R"(    %% %
     %{
-)", bind<write_nesting>(nest_level), type_keyword, type.TypeName(), bind<write_nesting>(nest_level));
+)", bind<write_nesting>(nest_level), type_keyword, type.TypeDisplayName(), bind<write_nesting>(nest_level));
 
         // Write nested types
         for (auto&& nested_type : type.get_cache().nested_types(type))
@@ -296,12 +296,12 @@ namespace cppwin32
                     
                     //if (auto nested_type = get_nested_type(field_type))
                     //{
-                    //    if (nested_type.Flags().Layout() == TypeLayout::ExplicitLayout && nested_type.TypeName().find("_e__Union") != std::string_view::npos)
+                    //    if (nested_type.Flags().Layout() == TypeLayout::ExplicitLayout && nested_type.TypeDisplayName().find("_e__Union") != std::string_view::npos)
                     //    {
                     //        // TODO: unions
                     //        continue;
                     //    }
-                    //    else if (nested_type.TypeName().find("_e__Struct") != std::string_view::npos)
+                    //    else if (nested_type.TypeDisplayName().find("_e__Struct") != std::string_view::npos)
                     //    {
                     //        // TODO: unions
                     //        continue;
@@ -438,7 +438,7 @@ namespace cppwin32
         void visit(value_type& v, std::vector<TypeDef>& sorted)
         {
 #ifdef _DEBUG
-            auto type_name = v.first.TypeName();
+            auto type_name = v.first.TypeDisplayName();
 #endif
 
             if (v.second.permanent) return;
@@ -703,7 +703,7 @@ namespace cppwin32
 )xyz";
         method_signature method_signature{ get_delegate_method(type) };
 
-        w.write(format, type.TypeName(), bind<write_method_return>(method_signature), bind<write_delegate_params>(method_signature));
+        w.write(format, type.TypeDisplayName(), bind<write_method_return>(method_signature), bind<write_delegate_params>(method_signature));
     }
 
     void write_delegates(writer& w, std::vector<TypeDef> const& delegates)
@@ -717,7 +717,10 @@ namespace cppwin32
 
         graph.walk_graph([&w](TypeDef const& type)
             {
+				auto arches = GetSupportedArchitectures(type);
+				check_for_write_defined_arches__part_head(w, arches);
                 write_delegate(w, type);
+                check_for_write_defined_arches__part_tail(w, arches);
             });
     }
 
@@ -728,7 +731,7 @@ namespace cppwin32
             return;
         }
 
-        auto name = type.TypeName();
+        auto name = type.TypeDisplayName();
 
         auto format = R"(    constexpr auto operator|(% const left, % const right) noexcept
     {
@@ -813,7 +816,7 @@ namespace cppwin32
 
     void write_guid(writer& w, TypeDef const& type)
     {
-        auto const name = type.TypeName();
+        auto const name = type.TypeDisplayName();
         if (name == "IUnknown")
         {
             return;
@@ -852,7 +855,7 @@ namespace cppwin32
             auto const format = R"(    struct __declspec(novtable) %%
     {
 )";
-            w.write(format, type.TypeName(), bind<write_base_interface>(type));
+            w.write(format, type.TypeDisplayName(), bind<write_base_interface>(type));
         }
 
         auto const format = R"(        virtual % __stdcall %(%) noexcept = 0;
@@ -860,7 +863,7 @@ namespace cppwin32
         auto abi_guard = w.push_abi_types(true);
 
         // BUG: Workaround https://github.com/microsoft/win32metadata/issues/127
-        if (type.TypeName() == "IUIAutomation6" && type.TypeNamespace() == "Windows.Win32.WindowsAccessibility")
+        if (type.TypeDisplayName() == "IUIAutomation6" && type.TypeNamespace() == "Windows.Win32.WindowsAccessibility")
         {
             for (auto&& method : type.MethodList())
             {
@@ -914,7 +917,7 @@ namespace cppwin32
     void write_consume(writer& w, TypeDef const& type)
     {
         auto const& method_list = type.MethodList();
-        auto const impl_name = get_impl_name(type.TypeNamespace(), type.TypeName());
+        auto const impl_name = get_impl_name(type.TypeNamespace(), type.TypeDisplayName());
 
         auto const format = R"(    struct consume_%
     {

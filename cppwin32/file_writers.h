@@ -132,6 +132,82 @@ namespace cppwin32
         w.save_header();
     }
 
+
+    //https://github.com/microsoft/win32metadata/blob/main/sources/MetadataUtils/Architecture.cs
+    //output \win32\impl\Windows.Win32.Foundation.Metadata.0.h
+    enum Architecture
+    {
+        None = 0,
+        X86 = 1,
+        X64 = 2,
+        Arm64 = 4,
+        All = X64 | X86 | Arm64
+    };
+
+    inline Architecture GetSupportedArchitectures(const TypeDef& method) {
+        Architecture arches = Architecture::None;
+        auto const attr = get_attribute(method, "Windows.Win32.Foundation.Metadata", "SupportedArchitectureAttribute");
+        if (attr)
+        {
+            CustomAttributeSig attr_sig = attr.Value();
+            //PRINT_VAR(attr_sig.FixedArgs().size());
+            //PRINT_VAR(attr_sig.NamedArgs().size());
+            FixedArgSig fixed_arg = attr_sig.FixedArgs()[0];
+            ElemSig elem_sig = std::get<ElemSig>(fixed_arg.value);
+            ElemSig::EnumValue enum_value = std::get<ElemSig::EnumValue>(elem_sig.value);
+            auto const arch_flags = std::get<int32_t>(enum_value.value);
+            arches = (Architecture)arch_flags;
+            //PRINT_VAR(arch_flags);
+            //PRINT_VAR("Found Supported Arch Attr");
+            //method_signature signature{ method };
+            //PRINT_VAR(method.Name());
+            //if ((arch_flags & 2) == 0) // x64
+            //    return false;
+        }
+        return arches;
+    }
+
+    static void check_for_write_defined_arches__part_head(writer& w, Architecture arches)
+    {
+		if (arches != Architecture::None)
+		{
+			bool has_least_one = false;
+			std::string str;
+			str = "#if ";
+			if (arches & Architecture::X86)
+			{
+				str += "defined(_M_IX86)";
+				has_least_one = true;
+			}
+			if (arches & Architecture::X64)
+			{
+				if (has_least_one)
+				{
+					str += " || ";
+				}
+				str += "defined(_M_AMD64)";
+				has_least_one = true;
+			}
+			if (arches & Architecture::Arm64)
+			{
+				if (has_least_one)
+				{
+					str += " || ";
+				}
+				str += "defined(_M_ARM64)";
+				has_least_one = true;
+			}
+			str += "\r\n";
+			w.write(str);
+		}
+    }
+    static void check_for_write_defined_arches__part_tail(writer& w, Architecture arches)
+    {
+		if (arches != Architecture::None)
+		{
+            write_endif(w);
+        }
+    }
     static void write_complex_structs_h(cache const& c)
     {
         writer w;
@@ -141,6 +217,12 @@ namespace cppwin32
         {
             for (auto&& s : members.structs)
             {
+                if (s.TypeDisplayName() == "CONTEXT")
+                {
+                    auto arches = GetSupportedArchitectures(s);
+                    int i = 0;
+                    i++;
+                }
                 graph.add_struct(s);
             }
         }
@@ -149,8 +231,13 @@ namespace cppwin32
             {
                 if (!is_nested(type))
                 {
-                    auto guard = wrap_type_namespace(w, type.TypeNamespace());
-                    write_struct(w, type);
+                    auto arches = GetSupportedArchitectures(type);
+                    check_for_write_defined_arches__part_head(w, arches);
+                    {
+						auto guard = wrap_type_namespace(w, type.TypeNamespace());
+						write_struct(w, type);
+                    }
+                    check_for_write_defined_arches__part_tail(w, arches);
                 }
             });
 

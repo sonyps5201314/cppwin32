@@ -18,13 +18,13 @@ namespace cppwin32
         std::string_view name_space;
 
         explicit type_name(TypeDef const& type) :
-            name(type.TypeName()),
+            name(type.TypeDisplayName()),
             name_space(type.TypeNamespace())
         {
         }
 
         explicit type_name(TypeRef const& type) :
-            name(type.TypeName()),
+            name(type.TypeDisplayName()),
             name_space(type.TypeNamespace())
         {
         }
@@ -211,7 +211,7 @@ namespace cppwin32
 
     inline bool is_com_interface(TypeDef const& type)
     {
-        if (type.TypeName() == "IUnknown")
+        if (type.TypeDisplayName() == "IUnknown")
         {
             return true;
         }
