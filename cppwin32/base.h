@@ -11,6 +11,10 @@
 #include <string_view>
 #include <type_traits>
 
+#undef SEEK_CUR
+#undef SEEK_END
+#undef SEEK_SET
+
 #ifdef _DEBUG
 
 #define WIN32_ASSERT _ASSERTE
