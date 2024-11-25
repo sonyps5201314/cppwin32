@@ -230,7 +230,7 @@ namespace cppwin32
         }
     }
 
-    TypeDef get_nested_type(TypeSig const& type)
+    TypeDef get_nested_type(TypeSig const& type, Architecture arches)
     {
         auto index = std::get_if<coded_index<TypeDefOrRef>>(&type.Type());
         TypeDef result{};
@@ -245,7 +245,7 @@ namespace cppwin32
             }
             else if (index->TypeRef().ResolutionScope().type() == ResolutionScope::TypeRef)
             {
-                result = find(index->TypeRef());
+                result = find(index->TypeRef(), arches);
             }
         }
         return result;
@@ -375,6 +375,7 @@ namespace cppwin32
         {
             auto [it, inserted] = dependency_map.insert({ type, {} });
             if (!inserted) return;
+            Architecture arches = GetSupportedArchitectures(type);
             for (auto&& field : type.FieldList())
             {
                 auto const signature = field.Signature();
@@ -382,7 +383,7 @@ namespace cppwin32
                 {
                     if (signature.Type().ptr_count() == 0 || is_nested(*field_type))
                     {
-                        auto field_type_def = find(*field_type);
+                        auto field_type_def = find(*field_type, arches);
                         if (field_type_def && get_category(field_type_def) != category::enum_type)
                         {
                             it->second.add_edge(field_type_def);
@@ -398,12 +399,13 @@ namespace cppwin32
             auto [it, inserted] = dependency_map.insert({ type, {} });
             if (!inserted) return;
             method_signature method_signature{ get_delegate_method(type) };
-            auto add_param = [this, current = it](TypeSig const& type)
+            Architecture arches = GetSupportedArchitectures(type);
+            auto add_param = [this, arches, current = it](TypeSig const& type)
             {
                 auto index = std::get_if<coded_index<TypeDefOrRef>>(&type.Type());
                 if (index)
                 {
-                    auto param_type_def = find(*index);
+                    auto param_type_def = find(*index, arches);
                     if (param_type_def && get_category(param_type_def) == category::delegate_type)
                     {
                         current->second.add_edge(param_type_def);
@@ -426,7 +428,8 @@ namespace cppwin32
             auto const base_index = get_base_interface(type);
             if (base_index)
             {
-                auto const base_type = find(base_index);
+                Architecture arches = GetSupportedArchitectures(type);
+                auto const base_type = find(base_index, arches);
                 if (base_type)
                 {
                     it->second.add_edge(base_type);

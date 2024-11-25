@@ -304,7 +304,8 @@ namespace cppwin32
             }
             else
             {
-                auto type_def = find(type);
+                Architecture arches = GetSupportedArchitectures(type);
+                auto type_def = find(type, arches);
                 if (type_def)
                 {
                     write(type_def);

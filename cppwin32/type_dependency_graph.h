@@ -65,6 +65,11 @@ namespace cppwin32
             auto [it, inserted] = graph.insert({ type, {} });
             if (!inserted) return;
 
+			Architecture arches = GetSupportedArchitectures(type);
+			if (arches == Architecture::None)
+			{
+				arches = Architecture::All;
+			}
             for (auto&& field : type.FieldList())
             {
                 auto const& signature = field.Signature();
@@ -72,12 +77,28 @@ namespace cppwin32
                 {
                     if (signature.Type().ptr_count() == 0 || is_nested(*field_type))
                     {
-                        auto field_type_def = find(*field_type);
-                        if (field_type_def && get_category(field_type_def) == category::struct_type)
-                        {
-                            it->second.add_edge(field_type_def);
-                            add_struct(field_type_def);
-                        }
+						auto field_type_def = find(*field_type, arches);
+						if (field_type_def && get_category(field_type_def) == category::struct_type)
+						{
+							auto pType = &field_type_def;
+							do
+							{
+								Architecture pType_arches = GetSupportedArchitectures(*pType);
+								if (pType_arches == Architecture::None)
+								{
+									pType_arches = Architecture::All;
+								}
+								if (pType_arches & arches)
+								{
+									it->second.add_edge(*pType);
+									add_struct(*pType);
+									if (arches == Architecture::X86 || arches == Architecture::X64 || arches == Architecture::Arm64)//arches为单一类型时可以结束循环了
+									{
+										break;
+									}
+								}
+							} while (pType = pType->next);
+						}
                     }
                 }
             }
@@ -88,13 +109,14 @@ namespace cppwin32
             auto [it, inserted] = graph.insert({ type, {} });
             if (!inserted) return;
 
+            Architecture arches = GetSupportedArchitectures(type);
             method_signature method_signature{ get_delegate_method(type) };
-            auto add_param = [this, current = it](TypeSig const& type)
+            auto add_param = [this, arches, current = it](TypeSig const& type)
             {
                 auto index = std::get_if<coded_index<TypeDefOrRef>>(&type.Type());
                 if (index)
                 {
-                    auto param_type_def = find(*index);
+                    auto param_type_def = find(*index, arches);
                     if (param_type_def && get_category(param_type_def) == category::delegate_type)
                     {
                         if (type_namespace.empty() || type_namespace == param_type_def.TypeDisplayName())
@@ -122,7 +144,8 @@ namespace cppwin32
             auto const base_index = get_base_interface(type);
             if (base_index)
             {
-                auto const base_type = find(base_index);
+                Architecture arches = GetSupportedArchitectures(type);
+                auto const base_type = find(base_index, arches);
                 if (base_type
                     && (type_namespace.empty() || type_namespace == base_type.TypeNamespace()))
                 {

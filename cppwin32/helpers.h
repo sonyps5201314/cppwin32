@@ -216,9 +216,10 @@ namespace cppwin32
             return true;
         }
 
+        Architecture arches = GetSupportedArchitectures(type);
         for (auto&& base : type.InterfaceImpl())
         {
-            auto base_type = find(base.Interface());
+            auto base_type = find(base.Interface(), arches);
             if (base_type && is_com_interface(base_type))
             {
                 return true;
