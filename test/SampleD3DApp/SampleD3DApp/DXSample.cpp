@@ -3,10 +3,11 @@
 
 using namespace win32;
 using namespace win32::Windows::Win32;
-using namespace win32::Windows::Win32::Dxgi;
-using namespace win32::Windows::Win32::SystemServices;
-using namespace win32::Windows::Win32::Direct3D12;
-using namespace win32::Windows::Win32::Direct3D11;
+using namespace win32::Windows::Win32::Graphics::Dxgi;
+using namespace win32::Windows::Win32::System::Services;
+using namespace win32::Windows::Win32::Graphics::Direct3D;
+using namespace win32::Windows::Win32::Graphics::Direct3D12;
+using namespace win32::Windows::Win32::Graphics::Direct3D11;
 
 win32::com_ptr<IDXGIAdapter1> DXSample::GetHardwareAdapter(
     IDXGIFactory1* factory,

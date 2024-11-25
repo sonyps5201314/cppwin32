@@ -4,10 +4,11 @@
 
 using namespace win32;
 using namespace win32::Windows::Win32;
-using namespace win32::Windows::Win32::Direct3D12;
-using namespace win32::Windows::Win32::SystemServices;
-using namespace win32::Windows::Win32::Dxgi;
-using namespace win32::Windows::Win32::Direct3D11;
+using namespace win32::Windows::Win32::Graphics::Direct3D;
+using namespace win32::Windows::Win32::Graphics::Direct3D12;
+using namespace win32::Windows::Win32::System::SystemServices;
+using namespace win32::Windows::Win32::Graphics::Dxgi;
+using namespace win32::Windows::Win32::Graphics::Direct3D11;
 
 void D3D12HelloWindow::OnInit()
 {
@@ -31,14 +32,14 @@ void D3D12HelloWindow::OnDestroy()
 
 void D3D12HelloWindow::LoadPipeline()
 {
-    uint32_t dxgiFactoryFlags = 0;
+    DXGI_CREATE_FACTORY_FLAGS dxgiFactoryFlags = (DXGI_CREATE_FACTORY_FLAGS)0;
 
 #if defined(_DEBUG)
     com_ptr<ID3D12Debug> debugController;
     if (D3D12GetDebugInterface((guid*)(&guid_of<ID3D12Debug>()), debugController.put_void()).Value == 0)
     {
         debugController->EnableDebugLayer();
-        dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+        dxgiFactoryFlags |= DXGI_CREATE_FACTORY_FLAGS::DXGI_CREATE_FACTORY_DEBUG;
     }
 #endif
 
