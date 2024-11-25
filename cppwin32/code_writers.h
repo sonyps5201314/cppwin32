@@ -593,8 +593,13 @@ namespace cppwin32
         {
             if (method.Flags().Access() == MemberAccess::Public)
             {
-                method_signature signature{ method };
-                w.write(format, bind<write_abi_return>(signature.return_signature()), method.Name(), bind<write_abi_params>(signature));
+                Architecture arches = GetSupportedArchitectures(method);
+                check_for_write_defined_arches__part_head(w, arches);
+                {
+					method_signature signature{ method };
+					w.write(format, bind<write_abi_return>(signature.return_signature()), method.Name(), bind<write_abi_params>(signature));
+                }
+                check_for_write_defined_arches__part_tail(w, arches);
             }
         }
         w.write(R"(}
@@ -668,8 +673,13 @@ namespace cppwin32
         {
             if (method.Flags().Access() == MemberAccess::Public)
             {
-                method_signature signature{ method };
-                write_class_method(w, signature);
+				Architecture arches = GetSupportedArchitectures(method);
+				check_for_write_defined_arches__part_head(w, arches);
+				{
+                    method_signature signature{ method };
+                    write_class_method(w, signature);
+                }
+                check_for_write_defined_arches__part_tail(w, arches);
             }
         }
 
