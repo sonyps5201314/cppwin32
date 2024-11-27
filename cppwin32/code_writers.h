@@ -667,6 +667,17 @@ namespace cppwin32
         );
     }
 
+    struct UdtConstTypeInfo
+    {
+        std::string_view udt;
+        ConstantType base;
+
+		bool operator<(const UdtConstTypeInfo& other) const
+        {
+			return udt < other.udt;
+		}
+    };
+    std::map<UdtConstTypeInfo, std::vector<std::string>> mapEnumFromUdtConst;
     void write_class(writer& w, TypeDef const& type)
     {
         for (auto&& method : type.MethodList())
@@ -701,10 +712,9 @@ namespace cppwin32
 						if (field_type_def && get_category(field_type_def) == category::struct_type)
 						{
 							std::string_view type_name = field_type_def.TypeDisplayName();
-							w.write("    inline constexpr % % = %;\n",
-                                type_name,
-								field.Name(),
-								constant);
+							writer sw;
+							sw.write("% = %", field.Name(), constant);
+							mapEnumFromUdtConst[UdtConstTypeInfo{ type_name, constant.Type() }].push_back(sw.flush_to_string());
                             printed = true;
 						}
 					}

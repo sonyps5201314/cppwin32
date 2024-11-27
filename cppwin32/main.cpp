@@ -183,6 +183,7 @@ Where <spec> is one or more of:
                         write_namespace_h(ns, members);
                     });
             }
+            group.add([&c] { write_EnumFromUdtConst_h(c); });
             group.add([&c] { write_complex_structs_h(c); });
             group.add([&c] { write_complex_interfaces_h(c); });
 

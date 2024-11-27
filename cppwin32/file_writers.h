@@ -132,6 +132,30 @@ namespace cppwin32
         w.save_header();
     }
 
+	static void write_EnumFromUdtConst_h(cache const& c)
+	{
+		writer w;
+
+		write_preamble(w);
+        write_open_file_guard(w, "EnumFromUdtConst");
+
+		for (auto&& item : mapEnumFromUdtConst)
+		{
+            auto& type = item.first;
+            auto& vec = item.second;
+            w.write("enum % : % {\n", type.udt, type.base);
+            for (auto& str: vec)
+            {
+                w.write("	%,\n", str);
+            }
+            w.write("};\n");
+		}
+
+        write_close_file_guard(w);
+
+		w.flush_to_file(settings.output_folder + "win32/impl/EnumFromUdtConst.h");
+	}
+
 
     static void write_complex_structs_h(cache const& c)
     {
