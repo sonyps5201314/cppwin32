@@ -685,15 +685,37 @@ namespace cppwin32
 
         w.write("\n");
 
+        Architecture arches = GetSupportedArchitectures(type);
         for (auto&& field : type.FieldList())
         {
             if (field.Flags().Literal())
             {
                 auto const constant = field.Constant();
-                w.write("    inline constexpr % % = %;\n",
-                    constant.Type(),
-                    field.Name(),
-                    constant);
+                bool printed = false;
+				auto const signature = field.Signature();
+				if (auto const field_type = std::get_if<coded_index<TypeDefOrRef>>(&signature.Type().Type()))
+				{
+					if (signature.Type().ptr_count() == 0 || is_nested(*field_type))
+					{
+						auto field_type_def = find(*field_type, arches);
+						if (field_type_def && get_category(field_type_def) == category::struct_type)
+						{
+							std::string_view type_name = field_type_def.TypeDisplayName();
+							w.write("    inline constexpr % % = %;\n",
+                                type_name,
+								field.Name(),
+								constant);
+                            printed = true;
+						}
+					}
+				}
+                if (!printed)
+                {
+					w.write("    inline constexpr % % = %;\n",
+						constant.Type(),
+						field.Name(),
+						constant);
+                }
             }
         }
     }
