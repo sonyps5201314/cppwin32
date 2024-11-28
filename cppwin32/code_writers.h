@@ -699,7 +699,8 @@ namespace cppwin32
         Architecture arches = GetSupportedArchitectures(type);
         for (auto&& field : type.FieldList())
         {
-            if (field.Flags().Literal())
+            auto flags = field.Flags();
+            if (flags.Literal())
             {
                 auto const constant = field.Constant();
                 bool printed = false;
@@ -726,6 +727,62 @@ namespace cppwin32
 						field.Name(),
 						constant);
                 }
+            }
+            else if (flags.Static())
+            {
+				auto const signature = field.Signature();
+				if (auto const field_type = std::get_if<coded_index<TypeDefOrRef>>(&signature.Type().Type()))
+				{
+					if (signature.Type().ptr_count() == 0 || is_nested(*field_type))
+					{
+                        std::string const_str;
+						auto field_type_def = find(*field_type, arches);
+						if (field_type_def && get_category(field_type_def) == category::struct_type)
+						{
+							auto attribute = get_attribute(field, "Windows.Win32.Foundation.Metadata", "ConstantAttribute");
+							if (!attribute)
+							{
+                                assert(false);
+								return;
+							}
+
+							auto const sig = attribute.Value();
+							const auto& args = sig.FixedArgs();
+							if (args.size() != 1)
+							{
+                                assert(false);
+								return;
+							}
+                            const_str = std::get<std::string_view>(std::get<ElemSig>(sig.FixedArgs()[0].value).value);
+                        }
+                        else if (field_type->type() == TypeDefOrRef::TypeRef)
+						{
+							auto field_type_ref = field_type->TypeRef();
+							auto type_name = field_type_ref.TypeDisplayName();
+							if (type_name == "Guid")
+							{
+                                const_str = get_attribute_guid(field);
+							}
+							else
+							{
+								assert(false);
+							}
+						}
+						else
+						{
+							assert(false);
+						}
+
+						w.write("    inline constexpr % % = { % };\n",
+                            *field_type,
+							field.Name(),
+                            const_str);
+					}
+				}
+            }
+            else
+            {
+                assert(false);
             }
         }
     }
@@ -813,94 +870,20 @@ namespace cppwin32
         w.write(format, name, name, name, name, name, name, name, name, name, name, name, name, name, name, name, name, name);
     }
 
-    struct guid
-    {
-        uint32_t Data1;
-        uint16_t Data2;
-        uint16_t Data3;
-        uint8_t  Data4[8];
-    };
-
-    guid to_guid(std::string_view const& str)
-    {
-        if (str.size() < 36)
-        {
-            throw_invalid("Invalid GuidAttribute blob");
-        }
-        guid result;
-        auto const data = str.data();
-        std::from_chars(data,      data + 8,  result.Data1, 16);
-        std::from_chars(data + 9,  data + 13, result.Data2, 16);
-        std::from_chars(data + 14, data + 18, result.Data3, 16);
-        std::from_chars(data + 19, data + 21, result.Data4[0], 16);
-        std::from_chars(data + 21, data + 23, result.Data4[1], 16);
-        std::from_chars(data + 24, data + 26, result.Data4[2], 16);
-        std::from_chars(data + 26, data + 28, result.Data4[3], 16);
-        std::from_chars(data + 28, data + 30, result.Data4[4], 16);
-        std::from_chars(data + 30, data + 32, result.Data4[5], 16);
-        std::from_chars(data + 32, data + 34, result.Data4[6], 16);
-        std::from_chars(data + 34, data + 36, result.Data4[7], 16);
-        return result;
-    }
-
-    void write_guid_value(writer& w, guid const& g)
-    {
-        w.write_printf("0x%08X,0x%04X,0x%04X,{ 0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X }",
-            g.Data1,
-            g.Data2,
-            g.Data3,
-            g.Data4[0],
-            g.Data4[1],
-            g.Data4[2],
-            g.Data4[3],
-            g.Data4[4],
-            g.Data4[5],
-            g.Data4[6],
-            g.Data4[7]);
-    }
-
     void write_guid(writer& w, TypeDef const& type)
     {
-        auto const name = type.TypeDisplayName();
-        if (name == "IUnknown")
+        auto guid_str = get_attribute_guid(type);
+        if (guid_str.empty())
         {
             return;
         }
-        auto attribute = get_attribute(type, "Windows.Win32.Foundation.Metadata", "GuidAttribute");
-        if (!attribute)
-        {
-            return;
-        }
-
-        auto const sig = attribute.Value();
-        const auto& args = sig.FixedArgs();
-        if (args.size() != 11)
-        {
-            return;
-        }
-
-        guid guid_value = { 
-            std::get <uint32_t>(std::get<ElemSig>(args[0].value).value),
-            std::get <uint16_t>(std::get<ElemSig>(args[1].value).value),
-            std::get <uint16_t>(std::get<ElemSig>(args[2].value).value),
-            {
-                std::get <uint8_t>(std::get<ElemSig>(args[3].value).value),
-                std::get <uint8_t>(std::get<ElemSig>(args[4].value).value),
-                std::get <uint8_t>(std::get<ElemSig>(args[5].value).value),
-                std::get <uint8_t>(std::get<ElemSig>(args[6].value).value),
-                std::get <uint8_t>(std::get<ElemSig>(args[7].value).value),
-                std::get <uint8_t>(std::get<ElemSig>(args[8].value).value),
-                std::get <uint8_t>(std::get<ElemSig>(args[9].value).value),
-                std::get <uint8_t>(std::get<ElemSig>(args[10].value).value),
-            }
-        };
 
         auto format = R"(    template <> inline constexpr guid guid_v<%>{ % };
 )";
 
         w.write(format,
             type,
-            bind<write_guid_value>(guid_value));
+            guid_str);
     }
 
     void write_base_interface(writer& w, TypeDef const& type)
@@ -994,7 +977,7 @@ namespace cppwin32
 
     void write_raii_helper(writer& w, Param const& param, std::set<std::string_view>& helpers)
     {
-        auto const attr = get_attribute(param, "Windows.Win32.Interop", "RAIIFreeAttribute");
+        auto const attr = get_attribute(param, "Windows.Win32.Foundation.Metadata", "RAIIFreeAttribute");
         if (!attr)
         {
             return;

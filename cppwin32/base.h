@@ -89,6 +89,14 @@ WIN32_EXPORT namespace win32
             Data4{ Data4[0], Data4[1], Data4[2], Data4[3], Data4[4], Data4[5], Data4[6], Data4[7] }
         {
         }
+		constexpr guid(uint32_t const Data1, uint16_t const Data2, uint16_t const Data3,
+            uint8_t  Data4, uint8_t  Data5, uint8_t  Data6, uint8_t  Data7, uint8_t  Data8, uint8_t  Data9, uint8_t  Data10, uint8_t  Data11) noexcept :
+			Data1(Data1),
+			Data2(Data2),
+			Data3(Data3),
+			Data4{ Data4, Data5, Data6, Data7, Data8, Data9, Data10, Data11 }
+		{
+		}
 
 #ifdef WIN32_IMPL_IUNKNOWN_DEFINED
 
@@ -374,7 +382,7 @@ WIN32_EXPORT namespace win32
 
     inline ::IUnknown* get_unknown(Windows::Win32::IUnknown const& object) noexcept
     {
-        return static_cast<::IUnknown*>(get_abi(object));
+        return static_cast<::IUnknown*>(get_abi((IUnknown*)&object));
     }
 
 #endif
