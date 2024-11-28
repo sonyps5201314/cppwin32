@@ -147,6 +147,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\winmd\src\impl\base.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\cache.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\column.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\custom_attribute.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\database.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\enum.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\enum_traits.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\filter.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\flags.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\helpers.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\index.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\key.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\pe.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\schema.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\signature.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\table.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\type_helpers.h" />
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\view.h" />
+    <ClInclude Include="..\..\winmd\src\winmd_reader.h" />
     <ClInclude Include="base.h">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>

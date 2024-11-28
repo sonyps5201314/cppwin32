@@ -13,6 +13,15 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="winmd">
+      <UniqueIdentifier>{a5871ec7-3c24-48a5-9dd6-d33f4a1d13bf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="winmd\impl">
+      <UniqueIdentifier>{c17b2bf8-f108-4791-af3d-b74794e5679b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="winmd\impl\winmd_reader">
+      <UniqueIdentifier>{839f15b1-fbe3-43b2-af65-ec8a93ab711e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="code_writers.h">
@@ -47,6 +56,63 @@
     </ClInclude>
     <ClInclude Include="type_dependency_graph.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\winmd_reader.h">
+      <Filter>winmd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\base.h">
+      <Filter>winmd\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\cache.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\column.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\custom_attribute.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\database.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\enum.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\enum_traits.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\filter.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\flags.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\helpers.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\index.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\key.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\pe.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\schema.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\signature.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\table.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\type_helpers.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\winmd\src\impl\winmd_reader\view.h">
+      <Filter>winmd\impl\winmd_reader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
