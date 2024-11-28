@@ -866,23 +866,41 @@ namespace cppwin32
         {
             return;
         }
-        auto attribute = get_attribute(type, "System.Runtime.InteropServices", "GuidAttribute");
+        auto attribute = get_attribute(type, "Windows.Win32.Foundation.Metadata", "GuidAttribute");
         if (!attribute)
         {
             return;
         }
 
         auto const sig = attribute.Value();
-        auto const guid_str = std::get<std::string_view>(std::get<ElemSig>(sig.FixedArgs()[0].value).value);
-        auto const guid_value = to_guid(guid_str);
+        const auto& args = sig.FixedArgs();
+        if (args.size() != 11)
+        {
+            return;
+        }
 
-        auto format = R"(    template <> inline constexpr guid guid_v<%>{ % }; // %
+        guid guid_value = { 
+            std::get <uint32_t>(std::get<ElemSig>(args[0].value).value),
+            std::get <uint16_t>(std::get<ElemSig>(args[1].value).value),
+            std::get <uint16_t>(std::get<ElemSig>(args[2].value).value),
+            {
+                std::get <uint8_t>(std::get<ElemSig>(args[3].value).value),
+                std::get <uint8_t>(std::get<ElemSig>(args[4].value).value),
+                std::get <uint8_t>(std::get<ElemSig>(args[5].value).value),
+                std::get <uint8_t>(std::get<ElemSig>(args[6].value).value),
+                std::get <uint8_t>(std::get<ElemSig>(args[7].value).value),
+                std::get <uint8_t>(std::get<ElemSig>(args[8].value).value),
+                std::get <uint8_t>(std::get<ElemSig>(args[9].value).value),
+                std::get <uint8_t>(std::get<ElemSig>(args[10].value).value),
+            }
+        };
+
+        auto format = R"(    template <> inline constexpr guid guid_v<%>{ % };
 )";
 
         w.write(format,
             type,
-            bind<write_guid_value>(guid_value),
-            guid_str);
+            bind<write_guid_value>(guid_value));
     }
 
     void write_base_interface(writer& w, TypeDef const& type)
