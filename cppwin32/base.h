@@ -15,6 +15,8 @@
 #undef SEEK_END
 #undef SEEK_SET
 
+#undef WIN32
+
 #ifdef _DEBUG
 
 #define WIN32_ASSERT _ASSERTE
