@@ -84,9 +84,9 @@ namespace cppwin32
 
         {
             // No namespace
-            w.write("#pragma region abi_methods\n");
-            w.write_each<write_class_abi>(members.classes);
-            w.write("#pragma endregion abi_methods\n\n");
+            //w.write("#pragma region abi_methods\n");
+            //w.write_each<write_class_abi>(members.classes);
+            //w.write("#pragma endregion abi_methods\n\n");
         }
 
         write_close_file_guard(w);

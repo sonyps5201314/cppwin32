@@ -651,19 +651,12 @@ namespace cppwin32
 
     void write_class_method(writer& w, method_signature const& method_signature)
     {
-        auto const format = R"xyz(    inline % %(%)
-    {
-        %WIN32_IMPL_%(%);%
-    }
+        auto const format = R"xyz(    % %(%);
 )xyz";
         w.write(format,
             bind<write_method_return>(method_signature),
             method_signature.method().Name(),
-            bind<write_method_params>(method_signature),
-            bind<write_consume_return_type>(method_signature),
-            method_signature.method().Name(),
-            bind<write_method_args>(method_signature),
-            bind<write_consume_return_statement>(method_signature)
+            bind<write_method_params>(method_signature)
         );
     }
 
