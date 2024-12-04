@@ -624,6 +624,11 @@ namespace cppwin32
             s();
             w.write("% %", param_signature->Type(), param.Name());
         }
+		if (method_signature.method().Signature().CallConvention() == CallingConvention::VarArg)
+		{
+			s();
+			w.write("...");
+		}
     }
 
     void write_method_args(writer& w, method_signature const& method_signature)
@@ -651,10 +656,17 @@ namespace cppwin32
 
     void write_class_method(writer& w, method_signature const& method_signature)
     {
-        auto const format = R"xyz(    % %(%);
+        auto const format = R"xyz(    % % %(%);
 )xyz";
+        auto cc_str = "__stdcall";
+        auto cc = method_signature.method().Signature().CallConvention();
+        if (cc == CallingConvention::VarArg)
+        {
+            cc_str = "__cdecl";
+        }
         w.write(format,
             bind<write_method_return>(method_signature),
+            cc_str,
             method_signature.method().Name(),
             bind<write_method_params>(method_signature)
         );
@@ -673,6 +685,9 @@ namespace cppwin32
     std::map<UdtConstTypeInfo, std::vector<std::string>> mapEnumFromUdtConst;
     void write_class(writer& w, TypeDef const& type)
     {
+		w.write(R"(extern "C"
+{
+)");
         for (auto&& method : type.MethodList())
         {
             if (method.Flags().Access() == MemberAccess::Public)
@@ -686,6 +701,9 @@ namespace cppwin32
                 check_for_write_defined_arches__part_tail(w, arches);
             }
         }
+
+		w.write(R"(}
+)");
 
         w.write("\n");
 

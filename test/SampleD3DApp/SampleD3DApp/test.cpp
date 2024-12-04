@@ -1,23 +1,16 @@
 #include "pch.h"
 
-//typedef wchar_t* PWSTR;
-enum INF_STYLE
-{
-	INF_STYLE_NONE = 0x0,
-	INF_STYLE_OLDNT = 0x1,
-	INF_STYLE_WIN4 = 0x2,
-	INF_STYLE_CACHE_ENABLE = 0x10,
-	INF_STYLE_CACHE_DISABLE = 0x20,
-	INF_STYLE_CACHE_IGNORE = 0x40,
-};
-extern "C" void* __stdcall SetupOpenInfFileW(PWSTR FileName, PWSTR InfClass, INF_STYLE InfStyle, unsigned int* ErrorLine);
-#pragma comment(lib,"Setupapi.lib")
-extern "C" int    __cdecl rand(void);
-extern "C" int __cdecl printf(const char* _Format, ...);
+
+using namespace win32::Windows::Win32::UI::WindowsAndMessaging;
+using namespace win32::Windows::Win32::UI::Input::KeyboardAndMouse;
+using namespace win32::Windows::Win32::System::Console;
 int main()
 {
-	auto pfnSetupOpenInfFileW = SetupOpenInfFileW;
-	int x = (int)pfnSetupOpenInfFileW + rand();
-	printf("%p %p", x,pfnSetupOpenInfFileW);
-	return x;
+	char buf[1000];
+	wsprintfA({ (uint8_t*)buf }, { (uint8_t*)"%p %p" }, (void*)0x123, main);
+	auto hWnd = GetActiveWindow();
+	auto hConsoleWnd = GetConsoleWindow();
+	SetConsoleTitleW({ (char*)L"Hello World!" });
+	SetWindowPos(hConsoleWnd, { (void*)HWND::HWND_TOPMOST }, 0, 0, 100, 100, (SET_WINDOW_POS_FLAGS)((uint32_t)SET_WINDOW_POS_FLAGS::SWP_NOMOVE | (uint32_t)SET_WINDOW_POS_FLAGS::SWP_NOACTIVATE));
+	return 0;
 }
