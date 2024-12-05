@@ -724,8 +724,8 @@ namespace cppwin32
         ConstantType base;
 
 		bool operator<(const UdtConstTypeInfo& other) const
-        {
-			return udt < other.udt;
+		{
+			return udt != other.udt ? udt < other.udt : base < other.base;
 		}
     };
     std::map<UdtConstTypeInfo, std::vector<std::string>> mapEnumFromUdtConst;
@@ -769,11 +769,27 @@ namespace cppwin32
 						auto field_type_def = find(*field_type, arches);
 						if (field_type_def && get_category(field_type_def) == category::struct_type)
 						{
+							auto const_type = constant.Type();
 							std::string_view type_name = field_type_def.TypeDisplayName();
 							writer sw;
-							sw.write("% = %", field.Name(), constant);
-							mapEnumFromUdtConst[UdtConstTypeInfo{ type_name, constant.Type() }].push_back(sw.flush_to_string());
-                            printed = true;
+							if (type_name == "PWSTR")
+							{
+								if (const_type != ConstantType::UInt32)
+								{
+									if (const_type == ConstantType::Int32 && constant.ValueInt32() < 0)
+									{
+										sw.write("% = (%)%", field.Name(), ConstantType::UInt32, constant);
+										printed = true;
+									}
+									const_type = ConstantType::UInt32;
+								}
+							}
+							if (!printed)
+							{
+								sw.write("% = %", field.Name(), constant);
+								printed = true;
+							}
+							mapEnumFromUdtConst[UdtConstTypeInfo{ type_name, const_type }].push_back(sw.flush_to_string());
 						}
 					}
 				}
