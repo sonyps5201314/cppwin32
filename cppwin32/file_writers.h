@@ -178,9 +178,9 @@ namespace cppwin32
                     check_for_write_defined_arches__part_head(w, arches);
                     {
 						auto guard = wrap_type_namespace(w, type.TypeNamespace());
-						if (get_attribute__NativeTypedef(type))
+						if (IsCppTypedef(type))
 						{
-							w.WriteNativeTypedef(type);
+							w.WriteCppTypedef(type);
 						}
 						else
 						{

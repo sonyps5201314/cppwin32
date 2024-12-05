@@ -353,8 +353,9 @@ namespace cppwin32
     }
 
 	template <typename T>
-    auto get_attribute__NativeTypedef(T const& type)
+    bool IsCppTypedef(T const& type)
     {
-        return get_attribute(type, "Windows.Win32.Foundation.Metadata", "NativeTypedefAttribute");
+        return get_attribute(type, "Windows.Win32.Foundation.Metadata", "NativeTypedefAttribute")
+            || get_attribute(type, "Windows.Win32.Foundation.Metadata", "MetadataTypedefAttribute");
     }
 }

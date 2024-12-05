@@ -452,7 +452,7 @@ namespace cppwin32
 		};
 		static constexpr tagForceTypeDef ForceTypeDefs[] = { {"PSTR","char*"},{"PWSTR","wchar_t*"} };
         static constexpr tagForceTypeDef ForceTypeDefs_Const[] = { {"PCSTR","const char*"},{"PCWSTR","const wchar_t*"} };
-		void WriteNativeTypedef(TypeDef const& type)
+		void WriteCppTypedef(TypeDef const& type)
 		{
 			int i = 0;
 

@@ -194,9 +194,9 @@ namespace cppwin32
             return;
         }
 
-        if (get_attribute__NativeTypedef(type))
+        if (IsCppTypedef(type))
         {
-            w.WriteNativeTypedef(type);
+            w.WriteCppTypedef(type);
         }
         else
         {
