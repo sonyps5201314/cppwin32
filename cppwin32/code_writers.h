@@ -629,7 +629,46 @@ namespace cppwin32
         for (auto&& [param, param_signature] : method_signature.params())
         {
             s();
-            w.write("% %", param_signature->Type(), param.Name());
+
+			bool outputed = false;
+			auto attribute_const = get_attribute(param, "Windows.Win32.Foundation.Metadata", "ConstAttribute");
+			if (attribute_const)
+			{
+				if (auto const field_type = std::get_if<coded_index<TypeDefOrRef>>(&param_signature->Type().Type()))
+				{
+					if (field_type->type() == TypeDefOrRef::TypeRef)
+					{
+						auto field_type_ref = field_type->TypeRef();
+						auto type_name = field_type_ref.TypeDisplayName();
+						int i = 0;
+						for (auto ftd : writer::ForceTypeDefs)
+						{
+							if (type_name == ftd.name)
+							{
+								type_name = writer::ForceTypeDefs_Const[i].name;
+								w.write("@::% %", field_type_ref.TypeNamespace(), type_name, param.Name());
+								outputed = true;
+								break;
+							}
+							i++;
+						}
+					}
+					else
+					{
+						//TypeDef类型的我们暂时不需要干预输出
+					}
+				}
+
+				if (!outputed)
+				{
+					w.write("const % %", param_signature->Type(), param.Name());
+					outputed = true;
+				}
+			}
+            if (!outputed)
+            {
+                w.write("% %", param_signature->Type(), param.Name());
+            }
         }
 		if (method_signature.method().Signature().CallConvention() == CallingConvention::VarArg)
 		{

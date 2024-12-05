@@ -1,5 +1,9 @@
 #pragma once
 
+#include <stdint.h>
+
+#include <win32\impl\EnumFromUdtConst.h>
+
 #include <win32\Windows.Win32.AI.MachineLearning.DirectML.h>
 #include <win32\Windows.Win32.AI.MachineLearning.WinML.h>
 #include <win32\Windows.Win32.Data.HtmlHelp.h>
@@ -323,8 +327,5 @@
 #include <win32\Windows.Win32.Web.InternetExplorer.h>
 #include <win32\Windows.Win32.Web.MsHtml.h>
 
-#include <win32\impl\EnumFromUdtConst.h>
-
-#include <stdint.h>
 
 #define IID_PPV_ARGS(ppType) win32::guid_of<**(ppType)>(), IID_PPV_ARGS_Helper(ppType)
