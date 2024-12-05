@@ -194,11 +194,18 @@ namespace cppwin32
             return;
         }
 
-        std::string_view const type_keyword = is_union(type) ? "union" : "struct";
-        auto format = R"(    % %;
+        if (get_attribute__NativeTypedef(type))
+        {
+            w.WriteNativeTypedef(type);
+        }
+        else
+        {
+			std::string_view const type_keyword = is_union(type) ? "union" : "struct";
+			auto format = R"(    % %;
 )";
 
-        w.write(format, type_keyword, type.TypeDisplayName());
+			w.write(format, type_keyword, type.TypeDisplayName());
+        }
     }
 
     struct struct_field

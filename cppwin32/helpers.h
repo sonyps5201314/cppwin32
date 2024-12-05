@@ -351,4 +351,10 @@ namespace cppwin32
         result = buffer;
         return result;
     }
+
+	template <typename T>
+    auto get_attribute__NativeTypedef(T const& type)
+    {
+        return get_attribute(type, "Windows.Win32.Foundation.Metadata", "NativeTypedefAttribute");
+    }
 }

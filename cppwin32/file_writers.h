@@ -178,7 +178,14 @@ namespace cppwin32
                     check_for_write_defined_arches__part_head(w, arches);
                     {
 						auto guard = wrap_type_namespace(w, type.TypeNamespace());
-						write_struct(w, type);
+						if (get_attribute__NativeTypedef(type))
+						{
+							w.WriteNativeTypedef(type);
+						}
+						else
+						{
+							write_struct(w, type);
+						}
                     }
                     check_for_write_defined_arches__part_tail(w, arches);
                 }

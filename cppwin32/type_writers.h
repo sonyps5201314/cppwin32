@@ -444,6 +444,28 @@ namespace cppwin32
             filename += ".h";
             flush_to_file(filename);
         }
+
+		void WriteNativeTypedef(TypeDef const& type)
+		{
+			int i = 0;
+
+			for (auto&& field : type.FieldList())
+			{
+				if (i > 0)
+				{
+					assert(false);
+					break;
+				}
+
+				auto const signature = field.Signature();
+				auto const field_type = signature.Type();
+				write("    typedef % %;\n",
+					field_type,
+					type.TypeDisplayName());
+
+				i++;
+			}
+		}
     };
 
 	static void check_for_write_defined_arches__part_head(writer& w, Architecture arches)
