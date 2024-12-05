@@ -445,6 +445,12 @@ namespace cppwin32
             flush_to_file(filename);
         }
 
+		struct tagForceTypeDef
+		{
+			const char* name;
+			const char* type;
+		};
+		static constexpr tagForceTypeDef ForceTypeDefs[] = { {"PSTR","char*"},{"PWSTR","wchar_t*"} };
 		void WriteNativeTypedef(TypeDef const& type)
 		{
 			int i = 0;
@@ -457,11 +463,31 @@ namespace cppwin32
 					break;
 				}
 
-				auto const signature = field.Signature();
-				auto const field_type = signature.Type();
-				write("    typedef % %;\n",
-					field_type,
-					type.TypeDisplayName());
+				bool found = false;
+				auto name = type.TypeDisplayName();
+				for (auto ftd : ForceTypeDefs)
+				{
+					if (name == ftd.name)
+					{
+						auto const signature = field.Signature();
+						auto const field_type = ftd.type;
+						write("    typedef % %;\n",
+							field_type,
+							name);
+
+						found = true;
+						break;
+					}
+				}
+
+				if (!found)
+				{
+					auto const signature = field.Signature();
+					auto const field_type = signature.Type();
+					write("    typedef % %;\n",
+						field_type,
+						name);
+				}
 
 				i++;
 			}
