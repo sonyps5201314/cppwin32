@@ -135,10 +135,19 @@ WIN32_EXPORT namespace win32
     }
 }
 
+#define HIDE_TYPE_NAMESPACE 1
+#if HIDE_TYPE_NAMESPACE
+WIN32_EXPORT namespace win32
+{
+}
+using namespace win32;
+struct IUnknown;
+#else
 WIN32_EXPORT namespace win32::Windows::Win32
 {
     struct IUnknown;
 }
+#endif
 
 namespace win32::_impl_
 {
@@ -210,7 +219,7 @@ namespace win32::_impl_
     template <typename T>
     T empty_value() noexcept
     {
-        if constexpr (std::is_base_of_v<Windows::Win32::IUnknown, T>)
+        if constexpr (std::is_base_of_v<IUnknown, T>)
         {
             return nullptr;
         }
@@ -227,7 +236,7 @@ namespace win32::_impl_
     struct produce;
 
     template <typename D>
-    struct produce<D, Windows::Win32::IUnknown> : produce_base<D, Windows::Win32::IUnknown>
+    struct produce<D, IUnknown> : produce_base<D, IUnknown>
     {
     };
 
@@ -271,7 +280,7 @@ WIN32_EXPORT namespace win32
 namespace win32::_impl_
 {
     template <typename T>
-    using com_ref = std::conditional_t<std::is_base_of_v<Windows::Win32::IUnknown, T>, T, com_ptr<T>>;
+    using com_ref = std::conditional_t<std::is_base_of_v<IUnknown, T>, T, com_ptr<T>>;
 
     template <typename T, std::enable_if_t<is_implements_v<T>, int> = 0>
     com_ref<T> wrap_as_result(void* result)
@@ -287,10 +296,10 @@ namespace win32::_impl_
 
 #ifdef WIN32_IMPL_IUNKNOWN_DEFINED
     template <typename T>
-    struct is_com_interface : std::disjunction<std::is_base_of<Windows::Win32::IUnknown, T>, is_implements<T>, std::is_base_of<::IUnknown, T>> {};
+    struct is_com_interface : std::disjunction<std::is_base_of<IUnknown, T>, is_implements<T>, std::is_base_of<::IUnknown, T>> {};
 #else
     template <typename T>
-    struct is_com_interface : std::disjunction<std::is_base_of<Windows::Win32::IUnknown, T>, is_implements<T>> {};
+    struct is_com_interface : std::disjunction<std::is_base_of<IUnknown, T>, is_implements<T>> {};
 #endif
 
     template <typename T>
@@ -331,20 +340,15 @@ namespace win32::_impl_
     }
 }
 
-WIN32_EXPORT namespace win32::Windows::Win32
-{
-    struct IUnknown;
-}
-
 WIN32_EXPORT namespace win32
 {
-    template <typename T, std::enable_if_t<!std::is_base_of_v<Windows::Win32::IUnknown, T>, int> = 0>
+    template <typename T, std::enable_if_t<!std::is_base_of_v<IUnknown, T>, int> = 0>
     auto get_abi(T const& object) noexcept
     {
         return reinterpret_cast<_impl_::abi_t<T> const&>(object);
     }
 
-    template <typename T, std::enable_if_t<!std::is_base_of_v<Windows::Win32::IUnknown, T>, int> = 0>
+    template <typename T, std::enable_if_t<!std::is_base_of_v<IUnknown, T>, int> = 0>
     auto put_abi(T& object) noexcept
     {
         if constexpr (!std::is_trivially_destructible_v<T>)
@@ -355,19 +359,19 @@ WIN32_EXPORT namespace win32
         return reinterpret_cast<_impl_::abi_t<T>*>(&object);
     }
 
-    template <typename T, typename V, std::enable_if_t<!std::is_base_of_v<Windows::Win32::IUnknown, T>, int> = 0>
+    template <typename T, typename V, std::enable_if_t<!std::is_base_of_v<IUnknown, T>, int> = 0>
     void copy_from_abi(T& object, V&& value)
     {
         object = reinterpret_cast<T const&>(value);
     }
 
-    template <typename T, typename V, std::enable_if_t<!std::is_base_of_v<Windows::Win32::IUnknown, T>, int> = 0>
+    template <typename T, typename V, std::enable_if_t<!std::is_base_of_v<IUnknown, T>, int> = 0>
     void copy_to_abi(T const& object, V& value)
     {
         reinterpret_cast<T&>(value) = object;
     }
 
-    template <typename T, std::enable_if_t<!std::is_base_of_v<Windows::Win32::IUnknown, std::decay_t<T>> && !std::is_convertible_v<T, std::wstring_view>, int> = 0>
+    template <typename T, std::enable_if_t<!std::is_base_of_v<IUnknown, std::decay_t<T>> && !std::is_convertible_v<T, std::wstring_view>, int> = 0>
     auto detach_abi(T&& object)
     {
         _impl_::abi_t<T> result{};
@@ -382,7 +386,7 @@ WIN32_EXPORT namespace win32
 
 #ifdef WIN32_IMPL_IUNKNOWN_DEFINED
 
-    inline ::IUnknown* get_unknown(Windows::Win32::IUnknown const& object) noexcept
+    inline ::IUnknown* get_unknown(IUnknown const& object) noexcept
     {
         return static_cast<::IUnknown*>(get_abi((IUnknown*)&object));
     }

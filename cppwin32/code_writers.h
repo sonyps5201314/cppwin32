@@ -134,8 +134,18 @@ namespace cppwin32
         return { w, write_close_namespace };
     }
 
-    [[nodiscard]] finish_with wrap_type_namespace(writer& w, std::string_view const& ns)
+	void write_nothing(writer& w)
+	{
+
+	}
+
+	[[nodiscard]] finish_with wrap_type_namespace(writer& w, std::string_view const& ns, bool cancel = false)
     {
+        if (cancel)
+        {
+            return { w, write_nothing };
+        }
+
         // TODO: Move into forwards
         auto format = R"(WIN32_EXPORT namespace win32::@
 {
@@ -159,6 +169,8 @@ namespace cppwin32
 
     void write_enum(writer& w, TypeDef const& type)
     {
+        auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+
         auto format = R"(    enum class % : %
     {
 %    };
@@ -182,6 +194,8 @@ namespace cppwin32
     {
         if (get_category(type) == category::enum_type)
         {
+            auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+
             type_name type_name(type);
             auto format = R"(    enum class % : %;
 )";
@@ -196,15 +210,24 @@ namespace cppwin32
 
         if (IsCppTypedef(type))
         {
+            auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+
             w.WriteCppTypedef(type);
         }
         else
         {
+            auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+
+			auto arches = GetSupportedArchitectures(type);
+			check_for_write_defined_arches__part_head(w, arches);
+
 			std::string_view const type_keyword = is_union(type) ? "union" : "struct";
 			auto format = R"(    % %;
 )";
 
 			w.write(format, type_keyword, type.TypeDisplayName());
+            
+            check_for_write_defined_arches__part_tail(w, arches);
         }
     }
 
@@ -260,12 +283,7 @@ namespace cppwin32
 
     void write_struct(writer& w, TypeDef const& type, int nest_level = 0)
     {
-#ifdef _DEBUG
-        if (type.TypeDisplayName() == "EVENT_PROPERTY_INFO")
-        {
-            type.TypeNamespace();
-        }
-#endif
+		auto guard = wrap_type_namespace(w, type.TypeNamespace(), nest_level == 0 ? IsHiddenTypeNamespace(type) : true);
 
         std::string_view const type_keyword = is_union(type) ? "union" : "struct";
         w.write(R"(    %% %
@@ -646,7 +664,17 @@ namespace cppwin32
 							if (type_name == ftd.name)
 							{
 								type_name = writer::ForceTypeDefs_Const[i].name;
-								w.write("@::% %", field_type_ref.TypeNamespace(), type_name, param.Name());
+
+                                if (!IsHiddenTypeNamespace(field_type_ref))
+                                {
+									if (w.full_namespace)
+									{
+                                        w.write("win32::");
+									}
+                                    w.write("@::", field_type_ref.TypeNamespace());
+                                }
+								w.write("% %", type_name, param.Name());
+
 								outputed = true;
 								break;
 							}
@@ -874,6 +902,8 @@ namespace cppwin32
 
     void write_delegate(writer& w, TypeDef const& type)
     {
+        auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+
         auto const format = R"xyz(    using % = % __stdcall(%);
 )xyz";
         method_signature method_signature{ get_delegate_method(type) };
@@ -970,6 +1000,8 @@ namespace cppwin32
 
     void write_interface(writer& w, TypeDef const& type)
     {
+		auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+
         {
             auto const format = R"(    struct __declspec(novtable) %%
     {

@@ -21,6 +21,32 @@ namespace cppwin32
         return result;
     }
 
+	std::map<std::string_view, std::string_view> mapNamespaceHiddenType;
+	void CheckForHideTypeNamespace(TypeDef const& type, const std::string_view& ns)
+	{
+#if HIDE_TYPE_NAMESPACE
+        std::string_view type_name = type.TypeDisplayName();
+		bool not_found = mapNamespaceHiddenType.find(type_name) == mapNamespaceHiddenType.end();
+		if (not_found)
+		{
+            mapNamespaceHiddenType[type_name] = ns;
+		}
+#endif
+	}
+    
+    template<class TypeDef_Or_TypeRef>
+	bool IsHiddenTypeNamespace(TypeDef_Or_TypeRef const& type)
+	{
+#if HIDE_TYPE_NAMESPACE
+		std::string_view type_name = type.TypeDisplayName();
+		auto v = mapNamespaceHiddenType.find(type_name);
+		bool result = v != mapNamespaceHiddenType.end() && v->second == type.TypeNamespace();
+		return result;
+#else
+        return false;
+#endif
+	}
+
     struct writer : writer_base<writer>
     {
         using writer_base<writer>::write;
@@ -284,11 +310,18 @@ namespace cppwin32
             }
             else
             {
-                if (full_namespace)
+                if (IsHiddenTypeNamespace(type))
                 {
-                    write("win32::");
+                    write("%", type.TypeDisplayName());
                 }
-                write("@::%", type.TypeNamespace(), type.TypeDisplayName());
+                else
+                {
+					if (full_namespace)
+					{
+						write("win32::");
+					}
+					write("@::%", type.TypeNamespace(), type.TypeDisplayName());
+                }
             }
         }
 
@@ -312,11 +345,18 @@ namespace cppwin32
                     return;
                 }
                 add_extern_depends(type);
-                if (full_namespace)
+                if (IsHiddenTypeNamespace(type))
                 {
-                    write("win32::");
+                    write("%", type.TypeDisplayName());
                 }
-                write("@::%", type.TypeNamespace(), type.TypeDisplayName());
+                else
+                {
+					if (full_namespace)
+					{
+						write("win32::");
+					}
+					write("@::%", type.TypeNamespace(), type.TypeDisplayName());
+                }
             }
         }
 
@@ -397,6 +437,41 @@ namespace cppwin32
                 },
                 [&](coded_index<TypeDefOrRef> const& type)
                 {
+                    if (type.type() == TypeDefOrRef::TypeRef)
+                    {
+                        //全局类多重指针必须前面加struct/union等类型关键字才行
+                        if (signature.element_type() == ElementType::Class && signature.ptr_count() > 0)
+                        {
+                            const auto& type_ref = type.TypeRef();
+                            if (IsHiddenTypeNamespace(type_ref))
+                            {
+                                std::string_view type_keyword;
+                                Architecture arches = GetSupportedArchitectures(type_ref);
+                                auto type_def = find(type, arches);
+                                if (type_def)
+                                {
+                                    auto cat = get_category(type_def);
+                                    if (cat == category::struct_type)
+                                    {
+                                        type_keyword = is_union(type_def) ? "union" : "struct";
+                                    }
+                                    else if (cat == category::interface_type || cat == category::class_type)
+                                    {
+                                        type_keyword = "struct";
+                                    }
+                                }
+                                else
+                                {
+                                    assert(false);
+                                }
+                                if (!type_keyword.empty())
+                                {
+                                    write(type_keyword);
+                                    write(' ');
+                                }
+                            }
+                        }
+                    }
                     write(type);
                     for (int i = 0; i < signature.ptr_count(); ++i)
                     {

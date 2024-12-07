@@ -8,8 +8,6 @@ namespace cppwin32
         w.type_namespace = ns;
 
         {
-            auto wrap = wrap_type_namespace(w, ns);
-
             w.write("#pragma region enums\n");
             w.write_each<write_enum>(members.enums);
             w.write("#pragma endregion enums\n\n");
@@ -39,7 +37,6 @@ namespace cppwin32
 
         for (auto&& depends : w.depends)
         {
-            auto guard = wrap_type_namespace(w, depends.first);
             w.write_each<write_forward>(depends.second);
         }
 
@@ -177,9 +174,10 @@ namespace cppwin32
                     auto arches = GetSupportedArchitectures(type);
                     check_for_write_defined_arches__part_head(w, arches);
                     {
-						auto guard = wrap_type_namespace(w, type.TypeNamespace());
 						if (IsCppTypedef(type))
 						{
+                            auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+
 							w.WriteCppTypedef(type);
 						}
 						else
@@ -222,7 +220,6 @@ namespace cppwin32
             {
                 if (!is_nested(type))
                 {
-                    auto guard = wrap_type_namespace(w, type.TypeNamespace());
                     write_interface(w, type);
                 }
             });

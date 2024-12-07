@@ -1,3 +1,5 @@
+#define HIDE_TYPE_NAMESPACE 1
+
 #include <winmd_reader.h>
 #include "cmd_reader.h"
 #include "settings.h"
@@ -172,6 +174,14 @@ Where <spec> is one or more of:
             task_group group;
 
             w.flush_to_console();
+
+            for (auto&& [ns, members] : c.namespaces())
+            {
+                for (auto&& s : members.types)
+                {
+                    CheckForHideTypeNamespace(s.second, ns);
+                }
+            }
 
             for (auto&& [ns, members] : c.namespaces())
             {
