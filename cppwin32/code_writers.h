@@ -281,6 +281,67 @@ namespace cppwin32
         return result;
     }
 
+	template <typename ROW, typename ROW_SIG>
+	std::string get_row_type_string(writer& w, ROW const& row, ROW_SIG const& row_signature)
+	{
+		std::string result;
+
+		bool outputed = false;
+
+		auto attribute_const = get_attribute(row, "Windows.Win32.Foundation.Metadata", "ConstAttribute");
+		if (attribute_const)
+		{
+			if (auto const field_type = std::get_if<coded_index<TypeDefOrRef>>(&row_signature.Type().Type()))
+			{
+				if (field_type->type() == TypeDefOrRef::TypeRef)
+				{
+					auto field_type_ref = field_type->TypeRef();
+					auto type_name = field_type_ref.TypeDisplayName();
+					int i = 0;
+					for (auto ftd : writer::ForceTypeDefs)
+					{
+						if (type_name == ftd.name)
+						{
+							type_name = writer::ForceTypeDefs_Const[i].name;
+
+							if (!IsHiddenTypeNamespace(field_type_ref))
+							{
+								if (w.full_namespace)
+								{
+									result = w.write_temp("win32::");
+								}
+								result += w.write_temp("@::", field_type_ref.TypeNamespace());
+							}
+							result += w.write_temp(type_name);
+
+							outputed = true;
+							break;
+						}
+						i++;
+					}
+				}
+				else
+				{
+					//TypeDef类型的我们暂时不需要干预输出
+				}
+			}
+
+			if (!outputed)
+			{
+				result = w.write_temp("const %", row_signature.Type());
+				outputed = true;
+			}
+		}
+
+		if (!outputed)
+		{
+			result = w.write_temp("%", row_signature.Type());
+			outputed = true;
+		}
+
+		return result;
+	}
+
     void write_struct(writer& w, TypeDef const& type, int nest_level = 0)
     {
 		auto guard = wrap_type_namespace(w, type.TypeNamespace(), nest_level == 0 ? IsHiddenTypeNamespace(type) : true);
@@ -338,7 +399,8 @@ namespace cppwin32
                     //{
                     //    continue;
                     //}
-                    fields.push_back({ name, w.write_temp("%", field_type), array_count });
+                    auto type_string = get_row_type_string(w, field, signature);
+                    fields.push_back({ name, type_string, array_count });
                 }
             }
 
@@ -648,55 +710,8 @@ namespace cppwin32
         {
             s();
 
-			bool outputed = false;
-			auto attribute_const = get_attribute(param, "Windows.Win32.Foundation.Metadata", "ConstAttribute");
-			if (attribute_const)
-			{
-				if (auto const field_type = std::get_if<coded_index<TypeDefOrRef>>(&param_signature->Type().Type()))
-				{
-					if (field_type->type() == TypeDefOrRef::TypeRef)
-					{
-						auto field_type_ref = field_type->TypeRef();
-						auto type_name = field_type_ref.TypeDisplayName();
-						int i = 0;
-						for (auto ftd : writer::ForceTypeDefs)
-						{
-							if (type_name == ftd.name)
-							{
-								type_name = writer::ForceTypeDefs_Const[i].name;
-
-                                if (!IsHiddenTypeNamespace(field_type_ref))
-                                {
-									if (w.full_namespace)
-									{
-                                        w.write("win32::");
-									}
-                                    w.write("@::", field_type_ref.TypeNamespace());
-                                }
-								w.write("% %", type_name, param.Name());
-
-								outputed = true;
-								break;
-							}
-							i++;
-						}
-					}
-					else
-					{
-						//TypeDef类型的我们暂时不需要干预输出
-					}
-				}
-
-				if (!outputed)
-				{
-					w.write("const % %", param_signature->Type(), param.Name());
-					outputed = true;
-				}
-			}
-            if (!outputed)
-            {
-                w.write("% %", param_signature->Type(), param.Name());
-            }
+			auto type_string = get_row_type_string(w, param, *param_signature);
+            w.write("% %", type_string, param.Name());
         }
 		if (method_signature.method().Signature().CallConvention() == CallingConvention::VarArg)
 		{
