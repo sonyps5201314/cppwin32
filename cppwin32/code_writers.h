@@ -313,6 +313,17 @@ namespace cppwin32
 								result += w.write_temp("@::", field_type_ref.TypeNamespace());
 							}
 							result += w.write_temp(type_name);
+							//因为不是以row_signature.Type()为参数(TypeSig类型)调用的w.write_temp，所以需要下面这样手动添加依赖
+							Architecture arches = GetSupportedArchitectures(field_type_ref);
+							auto field_type_def = find(field_type_ref, arches);
+							if (field_type_def)
+							{
+								w.add_depends(field_type_def);
+							}
+							else
+							{
+								assert(false);
+							}
 
 							outputed = true;
 							break;
@@ -591,7 +602,8 @@ namespace cppwin32
         for (auto&& [param, param_signature] : method_signature.params())
         {
             s();
-            w.write("% %", param_signature->Type(), param.Name());
+            auto type_string = get_row_type_string(w, param, *param_signature);
+            w.write("% %", type_string, param.Name());
         }
     }
 
@@ -709,8 +721,7 @@ namespace cppwin32
         for (auto&& [param, param_signature] : method_signature.params())
         {
             s();
-
-			auto type_string = get_row_type_string(w, param, *param_signature);
+            auto type_string = get_row_type_string(w, param, *param_signature);
             w.write("% %", type_string, param.Name());
         }
 		if (method_signature.method().Signature().CallConvention() == CallingConvention::VarArg)
@@ -909,9 +920,8 @@ namespace cppwin32
         for (auto&& [param, param_signature] : method_signature.params())
         {
             s();
-            std::string type;
-            type = w.write_temp("%", param_signature->Type());
-            w.write("%", type);
+			auto type_string = get_row_type_string(w, param, *param_signature);
+			w.write("% %", type_string, param.Name());
         }
     }
 
