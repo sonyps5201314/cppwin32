@@ -929,11 +929,12 @@ namespace cppwin32
     {
         auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
 
-        auto const format = R"xyz(    using % = % __stdcall(%);
+        auto const format = R"xyz(    typedef % (% * %) (%);
 )xyz";
         method_signature method_signature{ get_delegate_method(type) };
 
-        w.write(format, type.TypeDisplayName(), bind<write_method_return>(method_signature), bind<write_delegate_params>(method_signature));
+        //暂时无法获取调用约定属性，因为UnmanagedFunctionPointerAttribute类定义在外部dll中，C++版本的winmd库暂时不支持读取
+        w.write(format, bind<write_method_return>(method_signature), "__stdcall" , type.TypeDisplayName(), bind<write_delegate_params>(method_signature));
     }
 
     void write_delegates(writer& w, std::vector<TypeDef> const& delegates)

@@ -437,20 +437,23 @@ namespace cppwin32
                 },
                 [&](coded_index<TypeDefOrRef> const& type)
                 {
-                    if (type.type() == TypeDefOrRef::TypeRef)
+                    TypeDef type_def;
+                    category cat = (category)-1;
+                    auto type_type = type.type();
+                    if (type_type == TypeDefOrRef::TypeRef)
                     {
+                        const auto& type_ref = type.TypeRef();
+                        Architecture arches = GetSupportedArchitectures(type_ref);
+                        type_def = find(type, arches);
                         //全局类多重指针必须前面加struct/union等类型关键字才行
                         if (signature.element_type() == ElementType::Class && signature.ptr_count() > 0)
                         {
-                            const auto& type_ref = type.TypeRef();
                             if (IsHiddenTypeNamespace(type_ref))
                             {
                                 std::string_view type_keyword;
-                                Architecture arches = GetSupportedArchitectures(type_ref);
-                                auto type_def = find(type, arches);
                                 if (type_def)
                                 {
-                                    auto cat = get_category(type_def);
+                                    cat = get_category(type_def);
                                     if (cat == category::struct_type)
                                     {
                                         type_keyword = is_union(type_def) ? "union" : "struct";
@@ -472,6 +475,10 @@ namespace cppwin32
                             }
                         }
                     }
+                    else if(type_type == TypeDefOrRef::TypeDef)
+                    {
+                        type_def = type.TypeDef();
+                    }
                     write(type);
                     for (int i = 0; i < signature.ptr_count(); ++i)
                     {
@@ -479,7 +486,17 @@ namespace cppwin32
                     }
                     if (signature.element_type() == ElementType::Class)
                     {
-                        write('*');
+                        if (cat == (category)-1)
+                        {
+                            if (type_def)
+                            {
+                                cat = get_category(type_def);
+                            }
+                        }
+                        if (cat != category::delegate_type)
+                        {
+                            write('*');
+                        }
                     }
                 },
                 [&](auto&& type)
