@@ -12,6 +12,6 @@ int main()
 	hWnd = nullptr;
 	auto hConsoleWnd = GetConsoleWindow();
 	SetConsoleTitleW(L"Hello World!");
-	SetWindowPos(hConsoleWnd, { (void*)HWND::HWND_TOPMOST }, 0, 0, 100, 100, (SET_WINDOW_POS_FLAGS)((uint32_t)SET_WINDOW_POS_FLAGS::SWP_NOMOVE | (uint32_t)SET_WINDOW_POS_FLAGS::SWP_NOACTIVATE));
+	SetWindowPos(hConsoleWnd, { (void*)MACRO_HWND::HWND_TOPMOST }, 0, 0, 100, 100, (SET_WINDOW_POS_FLAGS)((uint32_t)SET_WINDOW_POS_FLAGS::SWP_NOMOVE | (uint32_t)SET_WINDOW_POS_FLAGS::SWP_NOACTIVATE));
 	return 0;
 }

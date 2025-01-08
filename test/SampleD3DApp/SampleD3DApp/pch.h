@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-//#include <win32\impl\EnumFromUdtConst.h>
+#include <win32\impl\EnumFromUdtConst.h>
 
 #include <win32\Windows.Win32.AI.MachineLearning.DirectML.h>
 #include <win32\Windows.Win32.AI.MachineLearning.WinML.h>

@@ -140,7 +140,7 @@ namespace cppwin32
 		{
             auto& type = item.first;
             auto& vec = item.second;
-            w.write("enum % : % {\n", type.udt, type.base);
+            w.write("enum MACRO_% : % {\n", type.udt, type.base);
             for (auto& str: vec)
             {
                 w.write("	%,\n", str);
