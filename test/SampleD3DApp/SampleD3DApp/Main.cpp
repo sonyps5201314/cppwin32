@@ -27,7 +27,7 @@ int run(DXSample* sample)
     windowClass.style = WNDCLASS_STYLES::CS_HREDRAW | WNDCLASS_STYLES::CS_VREDRAW;
     windowClass.lpfnWndProc = WindowProc;
     windowClass.hInstance = hInstance;
-    windowClass.hCursor = LoadCursorW(HINSTANCE{}, (uint16_t*)(IDC_ARROW)); // Ugly cast tracked by metadata bug https://github.com/microsoft/win32metadata/issues/69
+    windowClass.hCursor = LoadCursorW(HINSTANCE{}, (PWSTR)MACRO_PWSTR::IDC_ARROW); // Ugly cast tracked by metadata bug https://github.com/microsoft/win32metadata/issues/69
     windowClass.lpszClassName = (PWSTR)(L"DXSampleClass");
 
     RegisterClassExW(&windowClass);
@@ -38,7 +38,7 @@ int run(DXSample* sample)
     HWND hwnd = CreateWindowExW(
         (WINDOW_EX_STYLE)0,
         windowClass.lpszClassName,
-        (uint16_t*)(sample->Title().c_str()),
+        sample->Title().c_str(),
         WINDOW_STYLE::WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
@@ -56,7 +56,7 @@ int run(DXSample* sample)
     MSG msg;
     do
     {
-        if (PeekMessageW(&msg, HWND{}, 0, 0, PEEK_MESSAGE_REMOVE_TYPE::PM_REMOVE).Value != 0)
+        if (PeekMessageW(&msg, HWND{}, 0, 0, PEEK_MESSAGE_REMOVE_TYPE::PM_REMOVE) != 0)
         {
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
@@ -70,14 +70,14 @@ int run(DXSample* sample)
 
 LRESULT __stdcall WindowProc(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
 {
-    auto sample = reinterpret_cast<DXSample*>(GetWindowLongW(hwnd, WINDOW_LONG_PTR_INDEX::GWLP_USERDATA));
+    auto sample = reinterpret_cast<DXSample*>(GetWindowLongPtrW(hwnd, WINDOW_LONG_PTR_INDEX::GWLP_USERDATA));
 
     switch (message)
     {
     case WM_CREATE:
     {
-        auto create_struct = reinterpret_cast<CREATESTRUCTW*>(lParam.Value);
-        SetWindowLongW(
+        auto create_struct = reinterpret_cast<CREATESTRUCTW*>(lParam);
+        SetWindowLongPtrW(
             hwnd,
             WINDOW_LONG_PTR_INDEX::GWLP_USERDATA,
             reinterpret_cast<intptr_t>(create_struct->lpCreateParams));

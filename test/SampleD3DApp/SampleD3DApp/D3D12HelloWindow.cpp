@@ -36,7 +36,7 @@ void D3D12HelloWindow::LoadPipeline()
 
 #if defined(_DEBUG)
     com_ptr<ID3D12Debug> debugController;
-    if (D3D12GetDebugInterface((guid*)(&guid_of<ID3D12Debug>()), debugController.put_void()).Value == 0)
+    if (D3D12GetDebugInterface((guid*)(&guid_of<ID3D12Debug>()), debugController.put_void()) == 0)
     {
         debugController->EnableDebugLayer();
         dxgiFactoryFlags |= DXGI_CREATE_FACTORY_FLAGS::DXGI_CREATE_FACTORY_DEBUG;

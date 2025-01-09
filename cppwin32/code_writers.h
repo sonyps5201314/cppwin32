@@ -178,6 +178,12 @@ namespace cppwin32
 
         auto fields = type.FieldList();
         w.write(format, type.TypeDisplayName(), fields.first.Signature().Type(), bind_each<write_enum_field>(fields));
+
+		auto const attr = get_attribute(type, "System", "FlagsAttribute");
+        if (attr)
+        {
+            w.write("    DEFINE_ENUM_FLAG_OPERATORS(%)\r\n", type.TypeDisplayName());
+        }
     }
 
     void write_delegate(writer& w, TypeDef const& type);
