@@ -11,6 +11,8 @@
 #include <string_view>
 #include <type_traits>
 
+typedef wchar_t WCHAR;    // wc,   16-bit UNICODE character
+
 #ifndef DEFINE_ENUM_FLAG_OPERATORS
 #ifdef __cplusplus
 

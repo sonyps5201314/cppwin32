@@ -386,7 +386,7 @@ namespace cppwin32
                         write("bool");
                         break;
                     case ElementType::Char:
-                        write("char");
+                        write("WCHAR");
                         break;
                     case ElementType::I1:
                         write("int8_t");
