@@ -37,6 +37,11 @@ inline ENUMTYPE &operator ^= (ENUMTYPE &a, ENUMTYPE b) { return (ENUMTYPE &)(((i
 #endif
 #endif//DEFINE_ENUM_FLAG_OPERATORS
 
+#undef _MM_HINT_T0
+#undef _MM_HINT_T1
+#undef _MM_HINT_T2
+#undef _MM_HINT_NTA
+
 #undef SEEK_CUR
 #undef SEEK_END
 #undef SEEK_SET
