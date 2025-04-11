@@ -226,11 +226,7 @@ namespace win32::_impl_
 
     template <typename T>
 #ifdef WIN32_IMPL_IUNKNOWN_DEFINED
-#ifdef __clang__
-    inline const guid guid_v{ __uuidof(T) };
-#else
-    inline constexpr guid guid_v{ __uuidof(T) };
-#endif
+    inline constexpr guid guid_v{ (GUID&)__uuidof(T) };
 #else
     inline constexpr guid guid_v{};
 #endif
