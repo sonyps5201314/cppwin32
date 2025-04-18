@@ -4,6 +4,7 @@
 using namespace win32::Windows::Win32::UI::WindowsAndMessaging;
 using namespace win32::Windows::Win32::UI::Input::KeyboardAndMouse;
 using namespace win32::Windows::Win32::System::Console;
+using namespace PSDK;
 int main()
 {
 	char buf[1000];

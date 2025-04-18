@@ -34,6 +34,21 @@
 *.user
 *.nupkg
 
+# Visual C++ cache files
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+
+# .Net
+[Bb]in/
+[Oo]bj/
+
 build
 packages
 Debug

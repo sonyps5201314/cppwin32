@@ -88,6 +88,12 @@ inline ENUMTYPE &operator ^= (ENUMTYPE &a, ENUMTYPE b) { return (ENUMTYPE &)(((i
 #define WIN32_IMPL_LINK(function, count) __pragma(comment(linker, "/alternatename:WIN32_IMPL_" #function "=" #function))
 #endif
 
+#pragma warning(disable : 4995)
+#define WIN32__C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
+#define WIN32__STRING2(x) #x
+#define WIN32__STRING(x) WIN32__STRING2(x)
+#define WIN32__WARNING_MESSAGE(msg) __pragma(message (__FILE__ "(" WIN32__STRING(__LINE__) "): warning cppwin32: " # msg))
+
 WIN32_EXPORT namespace win32
 {
     struct hresult
@@ -133,7 +139,7 @@ WIN32_EXPORT namespace win32
 
 #ifdef WIN32_IMPL_IUNKNOWN_DEFINED
 
-        constexpr guid(GUID const& value) noexcept :
+        constexpr guid(PSDK::GUID const& value) noexcept :
             Data1(value.Data1),
             Data2(value.Data2),
             Data3(value.Data3),
@@ -142,9 +148,9 @@ WIN32_EXPORT namespace win32
 
         }
 
-        operator GUID const& () const noexcept
+        operator PSDK::GUID const& () const noexcept
         {
-            return reinterpret_cast<GUID const&>(*this);
+            return reinterpret_cast<PSDK::GUID const&>(*this);
         }
 
 #endif
@@ -183,7 +189,7 @@ WIN32_EXPORT namespace win32::Windows::Win32
 namespace win32::_impl_
 {
 #ifdef WIN32_IMPL_IUNKNOWN_DEFINED
-    using guid_type = GUID;
+    using guid_type = PSDK::GUID;
 #else
     using guid_type = guid;
 #endif
@@ -226,7 +232,7 @@ namespace win32::_impl_
 
     template <typename T>
 #ifdef WIN32_IMPL_IUNKNOWN_DEFINED
-    inline constexpr guid guid_v{ (GUID&)__uuidof(T) };
+    inline constexpr guid guid_v{ (PSDK::GUID&)__uuidof(T) };
 #else
     inline constexpr guid guid_v{};
 #endif

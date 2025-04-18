@@ -359,9 +359,22 @@ namespace cppwin32
 		return result;
 	}
 
+    //bool get_anonymous_struct_or_union_name(std::string_view& tname, std::string& result)
+    //{
+
+    //}
+
     void write_struct(writer& w, TypeDef const& type, int nest_level = 0)
     {
 		auto guard = wrap_type_namespace(w, type.TypeNamespace(), nest_level == 0 ? IsHiddenTypeNamespace(type) : true);
+
+        //https://learn.microsoft.com/en-us/cpp/preprocessor/pack?view=msvc-170
+		auto class_layout = type.ClassLayout();
+		if (class_layout)
+		{
+			uint16_t ps = class_layout.PackingSize();
+			w.write("#pragma pack(push,%)\r\n", ps);
+		}
 
         std::string_view const type_keyword = is_union(type) ? "union" : "struct";
         w.write(R"(    %% %
@@ -446,6 +459,36 @@ namespace cppwin32
 
         w.write(R"(    %};
 )", bind<write_nesting>(nest_level));
+
+        if (class_layout)
+        {
+            w.write("#pragma pack(pop)\r\n");
+        }
+
+		bool check = true;
+		if (check)
+		{
+			auto tname = type.TypeDisplayName();
+			if (nest_level == 0 || (tname.size() > 14 && strncmp(tname.data(), "_Anonymous_e__", 14) != 0))
+			{
+				std::string ns;
+				if (nest_level == 0)
+				{
+					if (tname.size() >= 2 && tname[0] == 'G' && tname[1] == 'p')
+					{
+						ns += "Gdiplus::";
+					}
+				}
+				auto tname_In_SDK = "PSDK::" + ns + tname.data();
+				w.write(R"(    __if_exists(%) {
+		WIN32__C_ASSERT(sizeof(%) == sizeof(%));
+	}
+	__if_not_exists(%) {
+		//WIN32__WARNING_MESSAGE("'%' does not exist, please #include the corresponding header file!");
+	}
+)", tname_In_SDK, tname, tname_In_SDK, tname_In_SDK, tname);
+			}
+		}
     }
 
     struct dependency_sorter

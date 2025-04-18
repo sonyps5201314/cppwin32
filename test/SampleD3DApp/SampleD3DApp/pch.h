@@ -2,6 +2,31 @@
 
 #include <stdint.h>
 
+#include <errno.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+namespace PSDK
+{
+//#define WIN32__VERIFY_STRUCT__
+#ifdef WIN32__VERIFY_STRUCT__
+#include <winsock2.h>
+#include <Windows.h>
+#include <d2d1effectauthor.h>
+#include <d2d1_3.h>
+#include <dwrite_3.h>
+#include <gdiplus.h>
+	namespace Gdiplus
+	{
+		class GpCachedBitmap {};
+	}
+#include <ClusApi.h>
+#include "..\..\ProcessTextTasks\ProcessTextTasks\bin\Debug\net6.0\undefs.h"
+#endif
+}
+
 #include <win32\impl\EnumFromUdtConst.h>
 
 #include <win32\Windows.Win32.AI.MachineLearning.DirectML.h>
