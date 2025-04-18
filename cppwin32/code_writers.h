@@ -465,8 +465,9 @@ namespace cppwin32
             w.write("#pragma pack(pop)\r\n");
         }
 
-		bool check = true;
-		if (check)
+		const bool check_size = true;
+		const bool check_offset = true;
+		if (check_size || check_offset)
 		{
 			auto tname = type.TypeDisplayName();
 			if (nest_level == 0 || (tname.size() > 14 && strncmp(tname.data(), "_Anonymous_e__", 14) != 0))
@@ -482,20 +483,33 @@ namespace cppwin32
 				auto tname_In_SDK = "PSDK::" + ns + tname.data();
 
 				std::string offset_check_string;
-				for (auto&& field : s.fields)
+				if (check_offset)
 				{
-					offset_check_string += w.write_temp("		__if_exists(%::%) { WIN32__C_ASSERT(offsetof(%, %) == offsetof(%, %)); }\r\n", 
-						tname_In_SDK, field.name, tname, field.name, tname_In_SDK, field.name);
+					if (check_size)
+					{
+						offset_check_string = "\r\n";
+					}
+					for (auto&& field : s.fields)
+					{
+						offset_check_string += w.write_temp("		__if_exists(%::%) { WIN32__C_ASSERT(offsetof(%, %) == offsetof(%, %)); }\r\n",
+							tname_In_SDK, field.name, tname, field.name, tname_In_SDK, field.name);
+					}
 				}
 
-				w.write(R"(	__if_exists(%) {
-		WIN32__C_ASSERT(sizeof(%) == sizeof(%));
-%
+				if (check_size)
+				{
+					w.write(R"(	__if_exists(%) {
+		WIN32__C_ASSERT(sizeof(%) == sizeof(%));%
 	}
 	__if_not_exists(%) {
 		//WIN32__WARNING_MESSAGE("'%' does not exist, please #include the corresponding header file!");
 	}
 )", tname_In_SDK, tname, tname_In_SDK, offset_check_string, tname_In_SDK, tname);
+				}
+				else
+				{
+					w.write(offset_check_string);
+				}
 			}
 		}
     }
