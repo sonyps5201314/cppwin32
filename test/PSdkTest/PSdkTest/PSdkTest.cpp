@@ -16,6 +16,7 @@
 #include <dwrite_3.h>
 #include <gdiplus.h>
 #include <ClusApi.h>
+#include <winhttp.h>
 
 int main()
 {

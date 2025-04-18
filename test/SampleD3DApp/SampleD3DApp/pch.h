@@ -12,6 +12,11 @@ namespace PSDK
 {
 //#define WIN32__VERIFY_STRUCT__
 #ifdef WIN32__VERIFY_STRUCT__
+
+#pragma warning(disable : 4995)
+#pragma warning(disable : 4996)
+
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <winsock2.h>
 #include <Windows.h>
 #include <d2d1effectauthor.h>
@@ -23,6 +28,8 @@ namespace PSDK
 		class GpCachedBitmap {};
 	}
 #include <ClusApi.h>
+#include <winhttp.h>
+
 #include "..\..\ProcessTextTasks\ProcessTextTasks\bin\Debug\net6.0\undefs.h"
 #endif
 }

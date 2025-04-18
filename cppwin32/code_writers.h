@@ -480,13 +480,22 @@ namespace cppwin32
 					}
 				}
 				auto tname_In_SDK = "PSDK::" + ns + tname.data();
-				w.write(R"(    __if_exists(%) {
+
+				std::string offset_check_string;
+				for (auto&& field : s.fields)
+				{
+					offset_check_string += w.write_temp("		__if_exists(%::%) { WIN32__C_ASSERT(offsetof(%, %) == offsetof(%, %)); }\r\n", 
+						tname_In_SDK, field.name, tname, field.name, tname_In_SDK, field.name);
+				}
+
+				w.write(R"(	__if_exists(%) {
 		WIN32__C_ASSERT(sizeof(%) == sizeof(%));
+%
 	}
 	__if_not_exists(%) {
 		//WIN32__WARNING_MESSAGE("'%' does not exist, please #include the corresponding header file!");
 	}
-)", tname_In_SDK, tname, tname_In_SDK, tname_In_SDK, tname);
+)", tname_In_SDK, tname, tname_In_SDK, offset_check_string, tname_In_SDK, tname);
 			}
 		}
     }

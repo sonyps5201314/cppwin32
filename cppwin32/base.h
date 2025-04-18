@@ -88,7 +88,6 @@ inline ENUMTYPE &operator ^= (ENUMTYPE &a, ENUMTYPE b) { return (ENUMTYPE &)(((i
 #define WIN32_IMPL_LINK(function, count) __pragma(comment(linker, "/alternatename:WIN32_IMPL_" #function "=" #function))
 #endif
 
-#pragma warning(disable : 4995)
 #define WIN32__C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
 #define WIN32__STRING2(x) #x
 #define WIN32__STRING(x) WIN32__STRING2(x)
