@@ -2,6 +2,35 @@
 
 namespace cppwin32
 {
+	inline bool starts_with(const std::string_view& value, const char* prefix, size_t prefix_len)
+	{
+		// Cannot start with an empty string.
+		if (prefix_len == 0)
+			return false;
+
+		return (value.size() >= prefix_len) &&
+			strncmp(value.data(), prefix, prefix_len) == 0;
+	}
+
+	inline bool ends_with(const std::string_view& value, const char* suffix, size_t suffix_len)
+	{
+		return (value.size() >= suffix_len) &&
+			strcmp(value.data() + value.size() - suffix_len, suffix) == 0;
+	}
+
+	template<size_t LEN>
+	bool starts_with(const std::string_view& value, const char(&prefix)[LEN])
+	{
+		return starts_with(value, prefix, LEN - 1);
+	}
+
+	template<size_t LEN>
+	bool ends_with(const std::string_view& str, const char(&suffix)[LEN])
+	{
+		return ends_with(str, suffix, LEN - 1);
+	}
+
+
     using namespace winmd::reader;
 
     template <typename...T> struct visit_overload : T... { using T::operator()...; };

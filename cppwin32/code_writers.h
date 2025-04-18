@@ -182,7 +182,7 @@ namespace cppwin32
 		auto const attr = get_attribute(type, "System", "FlagsAttribute");
         if (attr)
         {
-            w.write("    DEFINE_ENUM_FLAG_OPERATORS(%)\r\n", type.TypeDisplayName());
+            w.write("    DEFINE_ENUM_FLAG_OPERATORS(%)\n", type.TypeDisplayName());
         }
     }
 
@@ -241,6 +241,7 @@ namespace cppwin32
     {
         std::string_view name;
         std::string type;
+        bool need_pop_pack;
         std::optional<int32_t> array_count;
     };
 
@@ -264,6 +265,10 @@ namespace cppwin32
             w.write("        %@ %;\n",
                 bind<write_nesting>(nest_level), field.type, field.name);
         }
+		if (field.need_pop_pack)
+		{
+			w.write("#pragma pack(pop)\n");
+		}
     }
 
     TypeDef get_nested_type(TypeSig const& type, Architecture arches)
@@ -287,8 +292,34 @@ namespace cppwin32
         return result;
     }
 
+	bool is_anonymous_struct_or_union(std::string_view tname, std::string_view::size_type* pptr_pos)
+	{
+		if (starts_with(tname, "_Anonymous"))
+		{
+			auto pos = tname.find("_e__Struct");
+			if (pos != std::string_view::npos)
+			{
+				if (pptr_pos)
+				{
+					*pptr_pos = pos + std::size("_e__Struct") - 1;
+				}
+				return true;
+			}
+			pos = tname.find("_e__Union");
+			if (pos != std::string_view::npos)
+			{
+				if (pptr_pos)
+				{
+					*pptr_pos = pos + std::size("_e__Union") - 1;
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
 	template <typename ROW, typename ROW_SIG>
-	std::string get_row_type_string(writer& w, ROW const& row, ROW_SIG const& row_signature)
+	std::string get_row_type_string(writer& w, ROW const& row, ROW_SIG const& row_signature, Architecture arches = Architecture::None)
 	{
 		std::string result;
 
@@ -320,7 +351,6 @@ namespace cppwin32
 							}
 							result += w.write_temp(type_name);
 							//因为不是以row_signature.Type()为参数(TypeSig类型)调用的w.write_temp，所以需要下面这样手动添加依赖
-							Architecture arches = GetSupportedArchitectures(field_type_ref);
 							auto field_type_def = find(field_type_ref, arches);
 							if (field_type_def)
 							{
@@ -359,13 +389,14 @@ namespace cppwin32
 		return result;
 	}
 
-    //bool get_anonymous_struct_or_union_name(std::string_view& tname, std::string& result)
-    //{
-
-    //}
-
-    void write_struct(writer& w, TypeDef const& type, int nest_level = 0)
+    void write_struct(writer& w, TypeDef const& type, Architecture arches, int nest_level = 0)
     {
+        auto tname = type.TypeDisplayName();
+		//if (tname == "DHCP_ALL_OPTIONS")
+		//{
+		//	w.debug_trace = true;
+		//	int i = 0;
+		//}
 		auto guard = wrap_type_namespace(w, type.TypeNamespace(), nest_level == 0 ? IsHiddenTypeNamespace(type) : true);
 
         //https://learn.microsoft.com/en-us/cpp/preprocessor/pack?view=msvc-170
@@ -373,23 +404,30 @@ namespace cppwin32
 		if (class_layout)
 		{
 			uint16_t ps = class_layout.PackingSize();
-			w.write("#pragma pack(push,%)\r\n", ps);
+			w.write("#pragma pack(push,%)\n", ps);
 		}
 
+        bool is_anonymous = is_anonymous_struct_or_union(tname, nullptr);
+
         std::string_view const type_keyword = is_union(type) ? "union" : "struct";
-        w.write(R"(    %% %
+        w.write(R"(%% %
     %{
-)", bind<write_nesting>(nest_level), type_keyword, type.TypeDisplayName(), bind<write_nesting>(nest_level));
+)", bind<write_nesting>(is_anonymous ? 0 : nest_level + 1), type_keyword, is_anonymous ? "" : tname, bind<write_nesting>(nest_level));
 
         // Write nested types
         for (auto&& nested_type : type.get_cache().nested_types(type))
         {
-            write_struct(w, nested_type, nest_level + 1);
+            auto nested_type_name = nested_type.TypeDisplayName();
+            if (is_anonymous_struct_or_union(nested_type_name, nullptr))
+            {
+                continue;
+            }
+            write_struct(w, nested_type, arches, nest_level + 1);
         }
         
         struct complex_struct
         {
-            complex_struct(writer& w, TypeDef const& type)
+            complex_struct(writer& w, TypeDef const& type, Architecture arches, int nest_level)
                 : type(type)
             {
                 fields.reserve(size(type.FieldList()));
@@ -399,7 +437,7 @@ namespace cppwin32
                     {
                         continue;
                     }
-                    auto const name = field.Name();
+                    auto name = field.Name();
                     auto const signature = field.Signature();
                     auto const field_type = signature.Type();
 
@@ -429,8 +467,25 @@ namespace cppwin32
                     //{
                     //    continue;
                     //}
-                    auto type_string = get_row_type_string(w, field, signature);
-                    fields.push_back({ name, type_string, array_count });
+
+                    auto type_string = get_row_type_string(w, field, signature, arches);
+                    std::string_view::size_type ptr_pos = std::string_view::npos;
+                    bool is_anonymous = is_anonymous_struct_or_union(type_string, &ptr_pos);
+                    winmd::reader::ClassLayout class_layout;
+					if (is_anonymous)
+					{
+						auto nested_type = get_nested_type(field_type, arches);
+                        class_layout = nested_type.ClassLayout();
+
+						writer sw;
+						write_struct(sw, nested_type, arches, nest_level + 1);
+                        type_string = sw.flush_to_string() + &type_string[ptr_pos];
+					}
+                    if (starts_with(name, "Anonymous"))
+                    {
+                        name = "";
+                    }
+                    fields.push_back({ name, type_string, is_anonymous && class_layout, array_count });
                 }
             }
 
@@ -438,7 +493,7 @@ namespace cppwin32
             std::vector<struct_field> fields;
         };
 
-        complex_struct s{ w, type };
+        complex_struct s{ w, type, arches, nest_level };
 
         for (auto&& field : s.fields)
         {
@@ -457,20 +512,21 @@ namespace cppwin32
             }
         }
 
-        w.write(R"(    %};
-)", bind<write_nesting>(nest_level));
+        w.write("    %}%", bind<write_nesting>(nest_level), is_anonymous ? "" : ";\n");
 
-        if (class_layout)
+        if (!is_anonymous)
         {
-            w.write("#pragma pack(pop)\r\n");
+			if (class_layout)
+			{
+				w.write("#pragma pack(pop)\n");
+			}
         }
 
 		const bool check_size = true;
 		const bool check_offset = true;
 		if (check_size || check_offset)
 		{
-			auto tname = type.TypeDisplayName();
-			if (nest_level == 0 || (tname.size() > 14 && strncmp(tname.data(), "_Anonymous_e__", 14) != 0))
+			if (nest_level == 0 || !is_anonymous)
 			{
 				std::string ns;
 				if (nest_level == 0)
@@ -487,12 +543,15 @@ namespace cppwin32
 				{
 					if (check_size)
 					{
-						offset_check_string = "\r\n";
+						offset_check_string = "\n";
 					}
 					for (auto&& field : s.fields)
 					{
-						offset_check_string += w.write_temp("		__if_exists(%::%) { WIN32__C_ASSERT(offsetof(%, %) == offsetof(%, %)); }\r\n",
-							tname_In_SDK, field.name, tname, field.name, tname_In_SDK, field.name);
+						if (!field.name.empty())
+						{
+							offset_check_string += w.write_temp("		__if_exists(%::%) { WIN32__C_ASSERT(offsetof(%, %) == offsetof(%, %)); }\n",
+								tname_In_SDK, field.name, tname, field.name, tname_In_SDK, field.name);
+						}
 					}
 				}
 
@@ -658,7 +717,8 @@ namespace cppwin32
             {
                 if (get_category(type) == category::struct_type && !is_nested(type))
                 {
-                    write_struct(w, type);
+                    auto arches = GetSupportedArchitectures(type);
+                    write_struct(w, type, arches);
                 }
             }
             else if (!is_nested(type))
