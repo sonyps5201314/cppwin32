@@ -624,7 +624,7 @@ namespace cppwin32
 				str += "defined(_M_ARM64)";
 				has_least_one = true;
 			}
-			str += "\r\n";
+			str += "\n";
 			w.write(str);
 		}
 	}

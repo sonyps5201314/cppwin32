@@ -182,7 +182,7 @@ namespace cppwin32
 						}
 						else
 						{
-							write_struct(w, type);
+							write_struct(w, type, arches);
 						}
                     }
                     check_for_write_defined_arches__part_tail(w, arches);
