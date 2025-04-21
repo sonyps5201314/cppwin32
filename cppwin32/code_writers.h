@@ -298,25 +298,26 @@ namespace cppwin32
         return result;
     }
 
+	//根据ClangSharp\sources\ClangSharp.PInvokeGenerator\PInvokeGenerator.cs中的GetRemappedNameForAnonymousRecord函数得到
 	bool is_anonymous_struct_or_union(std::string_view tname, std::string_view::size_type* pptr_pos)
 	{
-		if (starts_with(tname, "_Anonymous"))
+		auto _e__pos = tname.rfind("_e__");
+		if (_e__pos != std::string_view::npos)
 		{
-			auto pos = tname.find("_e__Struct");
-			if (pos != std::string_view::npos)
+			auto name_pos = _e__pos += std::size("_e__") - 1;
+			if (starts_with(&tname[name_pos], "Struct"))
 			{
 				if (pptr_pos)
 				{
-					*pptr_pos = pos + std::size("_e__Struct") - 1;
+					*pptr_pos = name_pos + std::size("Struct") - 1;
 				}
 				return true;
 			}
-			pos = tname.find("_e__Union");
-			if (pos != std::string_view::npos)
+			else if (starts_with(&tname[name_pos], "Union"))
 			{
 				if (pptr_pos)
 				{
-					*pptr_pos = pos + std::size("_e__Union") - 1;
+					*pptr_pos = name_pos + std::size("Union") - 1;
 				}
 				return true;
 			}
@@ -492,7 +493,7 @@ namespace cppwin32
                         name = "";
                     }
                     
-                    if (name == "_bitfield")
+                    if (starts_with(name, "_bitfield"))
                     {
                         int64_t last_offset = 0;
 						for (auto&& attribute : field.CustomAttribute())
