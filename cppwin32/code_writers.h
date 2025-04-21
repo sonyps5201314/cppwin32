@@ -243,6 +243,7 @@ namespace cppwin32
         std::string type;
         bool need_pop_pack;
         std::optional<int32_t> array_count;
+        std::optional<int64_t> bitfield_length;
     };
 
     void write_nesting(writer& w, int nest_level)
@@ -260,6 +261,11 @@ namespace cppwin32
             w.write("        %@ %[%];\n",
                 bind<write_nesting>(nest_level), field.type, field.name, field.array_count.value());
         }
+		else if (field.bitfield_length)
+		{
+			w.write("        %@ % : %;\n",
+				bind<write_nesting>(nest_level), field.type, field.name, field.bitfield_length.value());
+		}
         else
         {
             w.write("        %@ %;\n",
@@ -392,7 +398,7 @@ namespace cppwin32
     void write_struct(writer& w, TypeDef const& type, Architecture arches, int nest_level = 0)
     {
         auto tname = type.TypeDisplayName();
-		//if (tname == "DHCP_ALL_OPTIONS")
+		//if (tname == "IPV4_HEADER")
 		//{
 		//	w.debug_trace = true;
 		//	int i = 0;
@@ -485,7 +491,48 @@ namespace cppwin32
                     {
                         name = "";
                     }
-                    fields.push_back({ name, type_string, is_anonymous && class_layout, array_count });
+                    
+                    if (name == "_bitfield")
+                    {
+                        int64_t last_offset = 0;
+						for (auto&& attribute : field.CustomAttribute())
+						{
+							auto pair = attribute.TypeNamespaceAndName();
+							if (pair.first == "Windows.Win32.Foundation.Metadata" && pair.second == "NativeBitfieldAttribute")
+							{
+								auto const sig = attribute.Value();
+								const auto& args = sig.FixedArgs();
+								if (args.size() != 3)
+								{
+									assert(false);
+                                    break;
+								}
+                                else
+                                {
+                                    //暂时假定是按照位域偏移依次挨个排列的
+                                    auto name = std::get <std::string_view>(std::get<ElemSig>(args[0].value).value);
+                                    auto offset = std::get <int64_t>(std::get<ElemSig>(args[1].value).value);
+                                    auto length = std::get <int64_t>(std::get<ElemSig>(args[2].value).value);
+                                    if (offset == last_offset)
+                                    {
+                                        std::optional<int64_t> bitfield_length(length);
+                                        fields.push_back({ name, type_string, is_anonymous && class_layout, array_count, bitfield_length });
+                                    }
+                                    else
+                                    {
+                                        assert(false);
+                                        break;
+                                    }
+                                    last_offset += length;
+                                }
+							}
+						}
+                    }
+                    else
+                    {
+						std::optional<int64_t> bitfield_length;
+						fields.push_back({ name, type_string, is_anonymous && class_layout, array_count, bitfield_length });
+                    }
                 }
             }
 
@@ -547,9 +594,9 @@ namespace cppwin32
 					}
 					for (auto&& field : s.fields)
 					{
-						if (!field.name.empty())
+						if (!field.name.empty() && !field.bitfield_length)
 						{
-							offset_check_string += w.write_temp("		__if_exists(%::%) { WIN32__C_ASSERT(offsetof(%, %) == offsetof(%, %)); }\n",
+							offset_check_string += w.write_temp("		__if_exists(%::%) { static_assert(offsetof(%, %) == offsetof(%, %)); }\n",
 								tname_In_SDK, field.name, tname, field.name, tname_In_SDK, field.name);
 						}
 					}
@@ -558,7 +605,7 @@ namespace cppwin32
 				if (check_size)
 				{
 					w.write(R"(	__if_exists(%) {
-		WIN32__C_ASSERT(sizeof(%) == sizeof(%));%
+		static_assert(sizeof(%) == sizeof(%));%
 	}
 	__if_not_exists(%) {
 		//WIN32__WARNING_MESSAGE("'%' does not exist, please #include the corresponding header file!");
