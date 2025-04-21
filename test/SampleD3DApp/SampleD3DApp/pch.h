@@ -17,6 +17,8 @@ namespace PSDK
 #pragma warning(disable : 4996)
 
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+#define CERT_CHAIN_PARA_HAS_EXTRA_FIELDS
+
 #include <winsock2.h>
 #include <Windows.h>
 #include <TlHelp32.h>
