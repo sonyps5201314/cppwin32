@@ -29,6 +29,7 @@ namespace PSDK
 	}
 #include <ClusApi.h>
 #include <winhttp.h>
+#include <netiodef.h>
 
 #include "..\..\ProcessTextTasks\ProcessTextTasks\bin\Debug\net6.0\undefs.h"
 #endif

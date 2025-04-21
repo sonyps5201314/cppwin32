@@ -5,6 +5,7 @@ using System.Collections.Generic;
 
 class Program
 {
+    // 要使本程序可以正常工作，需要先将SampleD3DApp项目的平台工具集调整为“LLVM (clang-cl)”并编译该项目以产生本项目的有效输入文件
     static void Main(string[] args)
     {
         try
