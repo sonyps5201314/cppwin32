@@ -34,6 +34,8 @@ namespace PSDK
 #include <winhttp.h>
 #include <netiodef.h>
 #include <VdmDbg.h>
+#include <usbspec.h>
+#include <WDBGEXTS.H>
 
 #include "..\..\ProcessTextTasks\ProcessTextTasks\bin\Debug\net6.0\undefs.h"
 #endif//WIN32__VERIFY_STRUCT__

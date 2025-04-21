@@ -399,7 +399,7 @@ namespace cppwin32
     void write_struct(writer& w, TypeDef const& type, Architecture arches, int nest_level = 0)
     {
         auto tname = type.TypeDisplayName();
-		//if (tname == "IPV4_HEADER")
+		//if (tname == "_BitField")
 		//{
 		//	w.debug_trace = true;
 		//	int i = 0;
@@ -574,6 +574,15 @@ namespace cppwin32
 		const bool check_offset = true;
 		if (check_size || check_offset)
 		{
+			std::string tname_full(tname);
+			TypeDef parent = type.EnclosingType();
+			while (parent)
+			{
+				tname_full.insert(0, "::");
+				tname_full.insert(0, parent.TypeDisplayName());
+
+				parent = parent.EnclosingType();
+			}
 			if (nest_level == 0 || !is_anonymous)
 			{
 				std::string ns;
@@ -584,7 +593,7 @@ namespace cppwin32
 						ns += "Gdiplus::";
 					}
 				}
-				auto tname_In_SDK = "PSDK::" + ns + tname.data();
+				auto tname_full_In_PSDK = "PSDK::" + ns + tname_full;
 
 				std::string offset_check_string;
 				if (check_offset)
@@ -598,7 +607,7 @@ namespace cppwin32
 						if (!field.name.empty() && !field.bitfield_length)
 						{
 							offset_check_string += w.write_temp("		__if_exists(%::%) { static_assert(offsetof(%, %) == offsetof(%, %)); }\n",
-								tname_In_SDK, field.name, tname, field.name, tname_In_SDK, field.name);
+								tname_full_In_PSDK, field.name, tname_full, field.name, tname_full_In_PSDK, field.name);
 						}
 					}
 				}
@@ -611,7 +620,7 @@ namespace cppwin32
 	__if_not_exists(%) {
 		//WIN32__WARNING_MESSAGE("'%' does not exist, please #include the corresponding header file!");
 	}
-)", tname_In_SDK, tname, tname_In_SDK, offset_check_string, tname_In_SDK, tname);
+)", tname_full_In_PSDK, tname, tname_full_In_PSDK, offset_check_string, tname_full_In_PSDK, tname_full);
 				}
 				else
 				{
