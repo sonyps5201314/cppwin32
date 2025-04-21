@@ -3,8 +3,12 @@
 #ifndef WIN32_BASE_H
 #define WIN32_BASE_H
 
+//ClusApi.h
 #pragma warning( disable : 4200 ) // nonstandard extension used : zero-sized array in struct/union
 #pragma warning( disable : 4201 ) // nonstandard extension used : nameless struct/union
+//VdmDbg.h
+#pragma warning(disable:4214) // bit field types other than int
+#pragma warning(disable:4121) // structure is sensitive to alignment
 
 #include <array>
 #include <stddef.h>

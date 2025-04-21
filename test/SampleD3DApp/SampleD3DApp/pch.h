@@ -19,6 +19,7 @@ namespace PSDK
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <winsock2.h>
 #include <Windows.h>
+#include <TlHelp32.h>
 #include <d2d1effectauthor.h>
 #include <d2d1_3.h>
 #include <dwrite_3.h>
@@ -30,6 +31,7 @@ namespace PSDK
 #include <ClusApi.h>
 #include <winhttp.h>
 #include <netiodef.h>
+#include <VdmDbg.h>
 
 #include "..\..\ProcessTextTasks\ProcessTextTasks\bin\Debug\net6.0\undefs.h"
 #endif
