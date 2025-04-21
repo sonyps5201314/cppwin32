@@ -36,7 +36,10 @@ namespace PSDK
 #include <VdmDbg.h>
 
 #include "..\..\ProcessTextTasks\ProcessTextTasks\bin\Debug\net6.0\undefs.h"
-#endif
+#endif//WIN32__VERIFY_STRUCT__
+	namespace Gdiplus
+	{
+	}
 }
 
 #include <win32\impl\EnumFromUdtConst.h>
