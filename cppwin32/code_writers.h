@@ -612,6 +612,10 @@ namespace cppwin32
 					}
 				}
 
+				if (nest_level > 0)
+				{
+					w.write("#ifndef __clang__\n");
+				}
 				if (check_size)
 				{
 					w.write(R"(	__if_exists(%) {
@@ -625,6 +629,10 @@ namespace cppwin32
 				else
 				{
 					w.write(offset_check_string);
+				}
+				if (nest_level > 0)
+				{
+					w.write("#endif//__clang__\n");
 				}
 			}
 		}
