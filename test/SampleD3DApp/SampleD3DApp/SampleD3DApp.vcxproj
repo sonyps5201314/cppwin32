@@ -72,7 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalOptions Condition="$(PlatformToolset)==ClangCL">-ferror-limit=0 -Wno-inconsistent-dllimport -Wno-invalid-offsetof %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="$(PlatformToolset)==ClangCL">-ferror-limit=0 -Wno-inconsistent-dllimport -Wno-invalid-offsetof -Wno-overloaded-virtual %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
     </Link>
