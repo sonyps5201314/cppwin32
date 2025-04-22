@@ -453,6 +453,14 @@ namespace cppwin32
                     {
                         XLANG_ASSERT(field_type.array_rank() == 1);
                         array_count = field_type.array_sizes()[0];
+                        if (array_count == 1)
+                        {
+                            auto attribute_IncompleteArray = get_attribute(field, "Windows.Win32.Foundation.Metadata", "IncompleteArrayAttribute");
+                            if (attribute_IncompleteArray)
+                            {
+                                array_count = 0;
+                            }
+                        }
                     }
                     
                     //if (auto nested_type = get_nested_type(field_type))
