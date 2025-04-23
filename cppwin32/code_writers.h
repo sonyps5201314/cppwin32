@@ -408,7 +408,7 @@ namespace cppwin32
     void write_struct(writer& w, TypeDef const& type, Architecture arches, int nest_level = 0)
     {
         auto tname = type.TypeDisplayName();
-		//if (tname == "_BitField")
+		//if (tname == "SLIST_ENTRY")
 		//{
 		//	w.debug_trace = true;
 		//	int i = 0;
@@ -423,12 +423,29 @@ namespace cppwin32
 			w.write("#pragma pack(push,%)\n", ps);
 		}
 
+		std::string alignOf;
+		auto attribute_NativeAlignment = get_attribute(type, "Windows.Win32.Foundation.Metadata", "NativeAlignmentAttribute");
+		if (attribute_NativeAlignment)
+		{
+			auto const sig = attribute_NativeAlignment.Value();
+			const auto& args = sig.FixedArgs();
+			if (args.size() != 1)
+			{
+				assert(false);
+			}
+			else
+			{
+				auto value = std::get <int64_t>(std::get<ElemSig>(args[0].value).value);
+				alignOf = w.write_temp("__declspec(align(%)) ", value);
+			}
+		}
+
         bool is_anonymous = is_anonymous_struct_or_union(tname, nullptr);
 
         std::string_view const type_keyword = is_union(type) ? "union" : "struct";
-        w.write(R"(%% %
+        w.write(R"(%%% %
     %{
-)", bind<write_nesting>(is_anonymous ? 0 : nest_level + 1), type_keyword, is_anonymous ? "" : tname, bind<write_nesting>(nest_level));
+)", bind<write_nesting>(is_anonymous ? 0 : nest_level + 1), alignOf, type_keyword, is_anonymous ? "" : tname, bind<write_nesting>(nest_level));
 
         // Write nested types
         for (auto&& nested_type : type.get_cache().nested_types(type))

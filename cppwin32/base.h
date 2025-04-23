@@ -3,6 +3,8 @@
 #ifndef WIN32_BASE_H
 #define WIN32_BASE_H
 
+//winnt.h
+#pragma warning(disable:4324)   // structure padded due to align()
 //ClusApi.h
 #pragma warning( disable : 4200 ) // nonstandard extension used : zero-sized array in struct/union
 #pragma warning( disable : 4201 ) // nonstandard extension used : nameless struct/union
