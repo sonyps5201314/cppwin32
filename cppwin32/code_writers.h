@@ -242,6 +242,7 @@ namespace cppwin32
         std::string_view name;
         std::string type;
         bool need_pop_pack;
+        bool is_array;
         std::optional<int32_t> array_count;
         std::optional<int64_t> bitfield_length;
     };
@@ -256,10 +257,18 @@ namespace cppwin32
 
     void write_struct_field(writer& w, struct_field const& field, int nest_level = 0)
     {
-        if (field.array_count)
+        if (field.is_array)
         {
-            w.write("        %@ %[%];\n",
-                bind<write_nesting>(nest_level), field.type, field.name, field.array_count.value());
+            if (field.array_count)
+            {
+				w.write("        %@ %[%];\n",
+					bind<write_nesting>(nest_level), field.type, field.name, field.array_count.value());
+            }
+            else
+            {
+				w.write("        %@ %[];\n",
+					bind<write_nesting>(nest_level), field.type, field.name);
+            }
         }
 		else if (field.bitfield_length)
 		{
@@ -448,18 +457,35 @@ namespace cppwin32
                     auto const signature = field.Signature();
                     auto const field_type = signature.Type();
 
+                    bool is_array = field_type.is_array();
                     std::optional<int32_t> array_count;
-                    if (field_type.is_array())
+                    if (is_array)
                     {
                         XLANG_ASSERT(field_type.array_rank() == 1);
-                        array_count = field_type.array_sizes()[0];
-                        if (array_count == 1)
+                        uint32_t elementCount = field_type.array_sizes()[0];
+                        if (elementCount == 1)
                         {
                             auto attribute_IncompleteArray = get_attribute(field, "Windows.Win32.Foundation.Metadata", "IncompleteArrayAttribute");
                             if (attribute_IncompleteArray)
                             {
-                                array_count = 0;
+                                //这种情况时不给array_count赋值
                             }
+                            else
+                            {
+								auto attribute_SizeZeroConstantArray = get_attribute(field, "Windows.Win32.Foundation.Metadata", "SizeZeroConstantArrayAttribute");
+								if (attribute_SizeZeroConstantArray)
+								{
+									array_count = 0;
+								}
+                                else
+                                {
+                                    array_count = elementCount;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            array_count = elementCount;
                         }
                     }
                     
@@ -525,7 +551,7 @@ namespace cppwin32
                                     if (offset == last_offset)
                                     {
                                         std::optional<int64_t> bitfield_length(length);
-                                        fields.push_back({ name, type_string, is_anonymous && class_layout, array_count, bitfield_length });
+                                        fields.push_back({ name, type_string, is_anonymous && class_layout, is_array, array_count, bitfield_length });
                                     }
                                     else
                                     {
@@ -540,7 +566,7 @@ namespace cppwin32
                     else
                     {
 						std::optional<int64_t> bitfield_length;
-						fields.push_back({ name, type_string, is_anonymous && class_layout, array_count, bitfield_length });
+						fields.push_back({ name, type_string, is_anonymous && class_layout, is_array, array_count, bitfield_length });
                     }
                 }
             }
