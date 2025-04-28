@@ -239,6 +239,7 @@ namespace cppwin32
 
     struct struct_field
     {
+        Field field;
         std::string_view name;
         std::string type;
         bool need_pop_pack;
@@ -334,6 +335,49 @@ namespace cppwin32
 		return false;
 	}
 
+	bool field_type_is_value_type(Field field)
+	{
+		auto const& signature = field.Signature();
+		auto const& field_type = signature.Type();
+		if (field_type.element_type() == ElementType::ValueType)
+		{
+			return true;
+		}
+		return false;
+	}
+	bool field_is_a_base_class(Field& field, std::string_view& name, int& last_base_class_index)
+	{
+		if (starts_with(name, "Base"))
+		{
+			const size_t base_len = std::size("Base") - 1;
+			if (last_base_class_index == 0)
+			{
+				if (name.length() == base_len)
+				{
+					if (field_type_is_value_type(field))
+					{
+						last_base_class_index = 1;
+						return true;
+					}
+				}
+			}
+			else
+			{
+				char* endptr = nullptr;
+				int num = strtol(&name[base_len], &endptr, 10);
+				if (*endptr == 0 && num == last_base_class_index + 1)
+				{
+					if (field_type_is_value_type(field))
+					{
+						last_base_class_index = num;
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
 	template <typename ROW, typename ROW_SIG>
 	std::string get_row_type_string(writer& w, ROW const& row, ROW_SIG const& row_signature, Architecture arches = Architecture::None)
 	{
@@ -408,55 +452,11 @@ namespace cppwin32
     void write_struct(writer& w, TypeDef const& type, Architecture arches, int nest_level = 0)
     {
         auto tname = type.TypeDisplayName();
-		//if (tname == "SLIST_ENTRY")
+		//if (tname == "CLUSPROP_RESOURCE_CLASS_INFO")
 		//{
 		//	w.debug_trace = true;
 		//	int i = 0;
 		//}
-		auto guard = wrap_type_namespace(w, type.TypeNamespace(), nest_level == 0 ? IsHiddenTypeNamespace(type) : true);
-
-        //https://learn.microsoft.com/en-us/cpp/preprocessor/pack?view=msvc-170
-		auto class_layout = type.ClassLayout();
-		if (class_layout)
-		{
-			uint16_t ps = class_layout.PackingSize();
-			w.write("#pragma pack(push,%)\n", ps);
-		}
-
-		std::string alignOf;
-		auto attribute_NativeAlignment = get_attribute(type, "Windows.Win32.Foundation.Metadata", "NativeAlignmentAttribute");
-		if (attribute_NativeAlignment)
-		{
-			auto const sig = attribute_NativeAlignment.Value();
-			const auto& args = sig.FixedArgs();
-			if (args.size() != 1)
-			{
-				assert(false);
-			}
-			else
-			{
-				auto value = std::get <int64_t>(std::get<ElemSig>(args[0].value).value);
-				alignOf = w.write_temp("__declspec(align(%)) ", value);
-			}
-		}
-
-        bool is_anonymous = is_anonymous_struct_or_union(tname, nullptr);
-
-        std::string_view const type_keyword = is_union(type) ? "union" : "struct";
-        w.write(R"(%%% %
-    %{
-)", bind<write_nesting>(is_anonymous ? 0 : nest_level + 1), alignOf, type_keyword, is_anonymous ? "" : tname, bind<write_nesting>(nest_level));
-
-        // Write nested types
-        for (auto&& nested_type : type.get_cache().nested_types(type))
-        {
-            auto nested_type_name = nested_type.TypeDisplayName();
-            if (is_anonymous_struct_or_union(nested_type_name, nullptr))
-            {
-                continue;
-            }
-            write_struct(w, nested_type, arches, nest_level + 1);
-        }
         
         struct complex_struct
         {
@@ -568,7 +568,7 @@ namespace cppwin32
                                     if (offset == last_offset)
                                     {
                                         std::optional<int64_t> bitfield_length(length);
-                                        fields.push_back({ name, type_string, is_anonymous && class_layout, is_array, array_count, bitfield_length });
+                                        fields.push_back({ field, name, type_string, is_anonymous && class_layout, is_array, array_count, bitfield_length });
                                     }
                                     else
                                     {
@@ -583,7 +583,7 @@ namespace cppwin32
                     else
                     {
 						std::optional<int64_t> bitfield_length;
-						fields.push_back({ name, type_string, is_anonymous && class_layout, is_array, array_count, bitfield_length });
+						fields.push_back({ field, name, type_string, is_anonymous && class_layout, is_array, array_count, bitfield_length });
                     }
                 }
             }
@@ -594,8 +594,77 @@ namespace cppwin32
 
         complex_struct s{ w, type, arches, nest_level };
 
+		auto guard = wrap_type_namespace(w, type.TypeNamespace(), nest_level == 0 ? IsHiddenTypeNamespace(type) : true);
+
+		//https://learn.microsoft.com/en-us/cpp/preprocessor/pack?view=msvc-170
+		auto class_layout = type.ClassLayout();
+		if (class_layout)
+		{
+			uint16_t ps = class_layout.PackingSize();
+			w.write("#pragma pack(push,%)\n", ps);
+		}
+
+		std::string alignOf;
+		auto attribute_NativeAlignment = get_attribute(type, "Windows.Win32.Foundation.Metadata", "NativeAlignmentAttribute");
+		if (attribute_NativeAlignment)
+		{
+			auto const sig = attribute_NativeAlignment.Value();
+			const auto& args = sig.FixedArgs();
+			if (args.size() != 1)
+			{
+				assert(false);
+			}
+			else
+			{
+				auto value = std::get <int64_t>(std::get<ElemSig>(args[0].value).value);
+				alignOf = w.write_temp("__declspec(align(%)) ", value);
+			}
+		}
+
+		bool is_anonymous = is_anonymous_struct_or_union(tname, nullptr);
+
+		std::string_view const type_keyword = is_union(type) ? "union" : "struct";
+
+		std::string base_classes;
+		int last_base_class_index = 0;
+		for (auto&& field : s.fields)
+		{
+			if (!field_is_a_base_class(field.field, field.name, last_base_class_index))
+			{
+				break;
+			}
+
+			bool is_empty = base_classes.empty();
+			for (int i = 0; i < nest_level + 1; ++i)
+			{
+				base_classes += "    ";
+			}
+			base_classes += is_empty ? ':' : ',';
+			base_classes += " public " + field.type + "\r\n";
+		}
+
+		w.write(R"(%%% %
+%    %{
+)", bind<write_nesting>(is_anonymous ? 0 : nest_level + 1), alignOf, type_keyword, is_anonymous ? "" : tname, base_classes, bind<write_nesting>(nest_level));
+
+        // Write nested types
+        for (auto&& nested_type : type.get_cache().nested_types(type))
+        {
+            auto nested_type_name = nested_type.TypeDisplayName();
+            if (is_anonymous_struct_or_union(nested_type_name, nullptr))
+            {
+                continue;
+            }
+            write_struct(w, nested_type, arches, nest_level + 1);
+        }
+
+        last_base_class_index = 0;
         for (auto&& field : s.fields)
         {
+			if (field_is_a_base_class(field.field, field.name, last_base_class_index))
+			{
+				continue;
+			}
             write_struct_field(w, field, nest_level);
         }
 
@@ -653,10 +722,16 @@ namespace cppwin32
 					{
 						offset_check_string = "\n";
 					}
+
+					last_base_class_index = 0;
 					for (auto&& field : s.fields)
 					{
 						if (!field.name.empty() && !field.bitfield_length)
 						{
+							if (field_is_a_base_class(field.field, field.name, last_base_class_index))
+							{
+								continue;
+							}
 							offset_check_string += w.write_temp("		__if_exists(%::%) { static_assert(offsetof(%, %) == offsetof(%, %)); }\n",
 								tname_full_In_PSDK, field.name, tname_full, field.name, tname_full_In_PSDK, field.name);
 						}
