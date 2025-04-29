@@ -691,8 +691,9 @@ namespace cppwin32
         }
 
 		const bool check_size = true;
-		const bool check_offset = true;
-		if (check_size || check_offset)
+		const bool check_field_offset = true;
+		const bool assume_field_name_exists = true;
+		if (check_size || check_field_offset)
 		{
 			std::string tname_full(tname);
 			TypeDef parent = type.EnclosingType();
@@ -716,7 +717,7 @@ namespace cppwin32
 				auto tname_full_In_PSDK = "PSDK::" + ns + tname_full;
 
 				std::string offset_check_string;
-				if (check_offset)
+				if (check_field_offset)
 				{
 					if (check_size)
 					{
@@ -732,8 +733,16 @@ namespace cppwin32
 							{
 								continue;
 							}
-							offset_check_string += w.write_temp("		__if_exists(%::%) { static_assert(offsetof(%, %) == offsetof(%, %)); }\n",
-								tname_full_In_PSDK, field.name, tname_full, field.name, tname_full_In_PSDK, field.name);
+							if (assume_field_name_exists)
+							{
+								offset_check_string += w.write_temp("		static_assert(offsetof(%, %) == offsetof(%, %));\n",
+									tname_full, field.name, tname_full_In_PSDK, field.name);
+							}
+							else
+							{
+								offset_check_string += w.write_temp("		__if_exists(%::%) { static_assert(offsetof(%, %) == offsetof(%, %)); }\n",
+									tname_full_In_PSDK, field.name, tname_full, field.name, tname_full_In_PSDK, field.name);
+							}
 						}
 					}
 				}
