@@ -36,6 +36,7 @@ namespace PSDK
 #include <VdmDbg.h>
 #include <usbspec.h>
 #include <WDBGEXTS.H>
+#include <UIAutomation.h>
 
 #include "..\..\ProcessTextTasks\ProcessTextTasks\bin\Debug\net6.0\undefs.h"
 #endif//WIN32__VERIFY_STRUCT__
@@ -371,3 +372,53 @@ namespace PSDK
 
 
 #define IID_PPV_ARGS(ppType) win32::guid_of<**(ppType)>(), IID_PPV_ARGS_Helper(ppType)
+
+#ifndef NOWINOFFSETS
+
+#ifdef UNICODE
+#define GetWindowLong  GetWindowLongW
+#else
+#define GetWindowLong  GetWindowLongA
+#endif // !UNICODE
+
+#ifdef UNICODE
+#define SetWindowLong  SetWindowLongW
+#else
+#define SetWindowLong  SetWindowLongA
+#endif // !UNICODE
+
+#ifdef _WIN64
+
+#ifdef UNICODE
+#define GetWindowLongPtr  GetWindowLongPtrW
+#else
+#define GetWindowLongPtr  GetWindowLongPtrA
+#endif // !UNICODE
+
+#ifdef UNICODE
+#define SetWindowLongPtr  SetWindowLongPtrW
+#else
+#define SetWindowLongPtr  SetWindowLongPtrA
+#endif // !UNICODE
+
+#else  /* _WIN64 */
+
+#define GetWindowLongPtrA   GetWindowLongA
+#define GetWindowLongPtrW   GetWindowLongW
+#ifdef UNICODE
+#define GetWindowLongPtr  GetWindowLongPtrW
+#else
+#define GetWindowLongPtr  GetWindowLongPtrA
+#endif // !UNICODE
+
+#define SetWindowLongPtrA   SetWindowLongA
+#define SetWindowLongPtrW   SetWindowLongW
+#ifdef UNICODE
+#define SetWindowLongPtr  SetWindowLongPtrW
+#else
+#define SetWindowLongPtr  SetWindowLongPtrA
+#endif // !UNICODE
+
+#endif /* _WIN64 */
+
+#endif /* !NOWINOFFSETS */
