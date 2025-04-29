@@ -329,7 +329,7 @@ namespace cppwin32
         {
             if (type.TypeNamespace() == "System" && type.TypeDisplayName() == "Guid")
             {
-                write("::win32::guid");
+                write("GUID");
             }
             else if (is_nested(type))
             {

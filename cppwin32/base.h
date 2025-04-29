@@ -83,6 +83,26 @@ inline ENUMTYPE &operator ^= (ENUMTYPE &a, ENUMTYPE b) { return (ENUMTYPE &)(((i
 #define WIN32_EXPORT
 #endif
 
+//guiddef.h
+#ifndef GUID_DEFINED
+#define GUID_DEFINED
+#if defined(__midl)
+typedef struct {
+	unsigned long  Data1;
+	unsigned short Data2;
+	unsigned short Data3;
+	byte           Data4[8];
+} GUID;
+#else
+typedef struct _GUID {
+	unsigned long  Data1;
+	unsigned short Data2;
+	unsigned short Data3;
+	unsigned char  Data4[8];
+} GUID;
+#endif
+#endif
+
 #ifdef __IUnknown_INTERFACE_DEFINED__
 #define WIN32_IMPL_IUNKNOWN_DEFINED
 #endif
