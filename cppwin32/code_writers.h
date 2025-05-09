@@ -24,18 +24,6 @@ namespace cppwin32
         }
     };
 
-    struct finish_with
-    {
-        writer& w;
-        void (*finisher)(writer&);
-
-        finish_with(writer& w, void (*finisher)(writer&)) : w(w), finisher(finisher) {}
-        finish_with(finish_with const&) = delete;
-        void operator=(finish_with const&) = delete;
-
-        ~finish_with() { finisher(w); }
-    };
-
     static void write_preamble(writer& w)
     {
         if (settings.license)
@@ -139,7 +127,7 @@ namespace cppwin32
 
 	}
 
-	[[nodiscard]] finish_with wrap_type_namespace(writer& w, std::string_view const& ns, bool cancel = false)
+	[[nodiscard]] finish_with wrap_type_namespace(writer& w, std::string_view const& ns, bool cancel /*= false*/)
     {
         if (cancel)
         {
@@ -216,8 +204,6 @@ namespace cppwin32
 
         if (IsCppTypedef(type))
         {
-            auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
-
             w.WriteCppTypedef(type);
         }
         else

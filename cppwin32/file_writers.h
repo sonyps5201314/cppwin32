@@ -176,8 +176,6 @@ namespace cppwin32
                     {
 						if (IsCppTypedef(type))
 						{
-                            auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
-
 							w.WriteCppTypedef(type);
 						}
 						else

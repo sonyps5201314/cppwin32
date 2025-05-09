@@ -47,6 +47,21 @@ namespace cppwin32
 #endif
 	}
 
+    struct writer;
+    struct finish_with
+    {
+        writer& w;
+        void (*finisher)(writer&);
+
+        finish_with(writer& w, void (*finisher)(writer&)) : w(w), finisher(finisher) {}
+        finish_with(finish_with const&) = delete;
+        void operator=(finish_with const&) = delete;
+
+        ~finish_with() { finisher(w); }
+    };
+    [[nodiscard]] finish_with wrap_type_namespace(writer& w, std::string_view const& ns, bool cancel = false);
+    void write_forward(writer& w, TypeDef const& type);
+
     struct writer : writer_base<writer>
     {
         using writer_base<writer>::write;
@@ -68,6 +83,7 @@ namespace cppwin32
         bool full_namespace{};
         bool consume_types{};
         std::map<std::string_view, std::set<TypeDef, depends_compare>> depends;
+        std::map<std::string_view, std::set<TypeDef, depends_compare>>* pdepends_In_WriteCppTypedef = nullptr;
         std::map<std::string_view, std::set<TypeRef, depends_compare>> extern_depends;
 
         template<typename T>
@@ -119,8 +135,12 @@ namespace cppwin32
         void add_depends(TypeDef const& type)
         {
             auto ns = type.TypeNamespace();
-
-            if (ns != type_namespace)
+            if (pdepends_In_WriteCppTypedef)
+            {
+                (*pdepends_In_WriteCppTypedef)[ns].insert(type);
+                depends[ns].erase(type);
+            }
+            else if (ns != type_namespace)
             {
                 depends[ns].insert(type);
             }
@@ -564,6 +584,8 @@ namespace cppwin32
 					{
 						if (type_name == ftd.name)
 						{
+                            auto guard = wrap_type_namespace(*this, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+
 							auto const signature = field.Signature();
 							auto const field_type = ftd.type;
 							write("    typedef % %;\n",
@@ -584,9 +606,27 @@ namespace cppwin32
 				{
 					auto const signature = field.Signature();
 					auto const field_type = signature.Type();
-					write("    typedef % %;\n",
+
+                    std::map<std::string_view, std::set<TypeDef, depends_compare>>* Last_pdepends_In_WriteCppTypedef = pdepends_In_WriteCppTypedef;
+                    std::map<std::string_view, std::set<TypeDef, depends_compare>> depends;
+                    pdepends_In_WriteCppTypedef = &depends;
+
+					auto str_typedef = write_temp("    typedef % %;\n",
 						field_type,
                         type_name);
+                    
+                    pdepends_In_WriteCppTypedef = Last_pdepends_In_WriteCppTypedef;
+
+					for (auto&& depends : depends)
+					{
+						write_each<write_forward>(depends.second);
+					}
+
+                    {
+						auto guard = wrap_type_namespace(*this, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+
+						write(str_typedef);
+                    }
 				}
 
 				i++;
