@@ -388,6 +388,74 @@ namespace cppwin32
             || get_attribute(type, "Windows.Win32.Foundation.Metadata", "MetadataTypedefAttribute");
     }
 
+    bool uses_legacy_constant_enum(TypeDef const& type)
+    {
+        auto const ns = type.TypeNamespace();
+        auto const name = type.TypeDisplayName();
+        return (ns == "Windows.Win32.Foundation"
+            && (name == "HRESULT" || name == "NTSTATUS" || name == "BOOL"
+                || name == "VARIANT_BOOL" || name == "BOOLEAN"))
+            || (ns == "Windows.Win32.Devices.Properties" && name == "DEVPROP_BOOLEAN")
+            || (ns == "Windows.Win32.UI.Controls" && name == "HTREEITEM")
+            || (ns == "Windows.Win32.Networking.WinSock" && (name == "SOCKET" || name == "WSAEVENT"));
+    }
+
+    bool is_arithmetic_typedef(TypeDef type, Architecture arches)
+    {
+        std::vector<TypeDef> visited;
+        for (;;)
+        {
+            if (!type || !IsCppTypedef(type)
+                || std::find(visited.begin(), visited.end(), type) != visited.end())
+            {
+                return false;
+            }
+            visited.push_back(type);
+
+            Field value;
+            for (auto const& field : type.FieldList())
+            {
+                if (field.Flags().Static()) continue;
+                if (value || field.Name() != "Value") return false;
+                value = field;
+            }
+            if (!value) return false;
+
+            auto const signature = value.Signature();
+            auto const& value_type = signature.Type();
+            if (value_type.ptr_count() != 0 || value_type.is_array() || value_type.is_szarray())
+            {
+                return false;
+            }
+            if (auto const primitive = std::get_if<ElementType>(&value_type.Type()))
+            {
+                switch (*primitive)
+                {
+                case ElementType::Boolean:
+                case ElementType::Char:
+                case ElementType::I1:
+                case ElementType::U1:
+                case ElementType::I2:
+                case ElementType::U2:
+                case ElementType::I4:
+                case ElementType::U4:
+                case ElementType::I8:
+                case ElementType::U8:
+                case ElementType::R4:
+                case ElementType::R8:
+                case ElementType::I:
+                case ElementType::U:
+                    return true;
+                default:
+                    return false;
+                }
+            }
+            auto const index = std::get_if<coded_index<TypeDefOrRef>>(&value_type.Type());
+            if (!index) return false;
+            type = find(*index, arches);
+        }
+    }
+
     bool is_guid_type(coded_index<TypeDefOrRef> type, Architecture arches)
     {
         std::vector<TypeDef> visited;

@@ -1132,6 +1132,11 @@ namespace cppwin32
             if (flags.Literal())
             {
                 auto const constant = field.Constant();
+                if (constant.Type() == ConstantType::String)
+                {
+                    w.write("    inline constexpr % % = %;\n", constant.Type(), field.Name(), constant);
+                    continue;
+                }
                 bool printed = false;
 				auto const signature = field.Signature();
 				if (auto const field_type = std::get_if<coded_index<TypeDefOrRef>>(&signature.Type().Type()))
@@ -1141,6 +1146,12 @@ namespace cppwin32
 						auto field_type_def = find(*field_type, arches);
 						if (field_type_def && get_category(field_type_def) == category::struct_type)
 						{
+                                if (is_arithmetic_typedef(field_type_def, arches)
+                                    && !uses_legacy_constant_enum(field_type_def))
+                                {
+                                    w.write("    inline constexpr % % = %;\n", *field_type, field.Name(), constant);
+                                    continue;
+                                }
 							auto const_type = constant.Type();
 							std::string_view type_name = field_type_def.TypeDisplayName();
 							writer sw;
