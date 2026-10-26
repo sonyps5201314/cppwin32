@@ -387,4 +387,47 @@ namespace cppwin32
         return get_attribute(type, "Windows.Win32.Foundation.Metadata", "NativeTypedefAttribute")
             || get_attribute(type, "Windows.Win32.Foundation.Metadata", "MetadataTypedefAttribute");
     }
+
+    bool is_guid_type(coded_index<TypeDefOrRef> type, Architecture arches)
+    {
+        std::vector<TypeDef> visited;
+        for (;;)
+        {
+            if (type.type() == TypeDefOrRef::TypeRef)
+            {
+                auto const reference = type.TypeRef();
+                if (reference.TypeNamespace() == "System" && reference.TypeDisplayName() == "Guid")
+                {
+                    return true;
+                }
+            }
+
+            auto const definition = find(type, arches);
+            if (!definition || !IsCppTypedef(definition)
+                || std::find(visited.begin(), visited.end(), definition) != visited.end())
+            {
+                return false;
+            }
+            visited.push_back(definition);
+
+            Field value;
+            for (auto const& field : definition.FieldList())
+            {
+                if (field.Flags().Static()) continue;
+                if (value || field.Name() != "Value") return false;
+                value = field;
+            }
+            if (!value) return false;
+
+            auto const signature = value.Signature();
+            auto const& value_type = signature.Type();
+            if (value_type.ptr_count() != 0 || value_type.is_array() || value_type.is_szarray())
+            {
+                return false;
+            }
+            auto const index = std::get_if<coded_index<TypeDefOrRef>>(&value_type.Type());
+            if (!index) return false;
+            type = *index;
+        }
+    }
 }

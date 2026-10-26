@@ -1182,7 +1182,12 @@ namespace cppwin32
 					{
                         std::string const_str;
 						auto field_type_def = find(*field_type, arches);
-						if (field_type_def && get_category(field_type_def) == category::struct_type)
+						if (get_attribute(field, "Windows.Win32.Foundation.Metadata", "GuidAttribute")
+                            && is_guid_type(*field_type, arches))
+                        {
+                            const_str = get_attribute_guid(field);
+                        }
+                        else if (field_type_def && get_category(field_type_def) == category::struct_type)
 						{
 							auto attribute = get_attribute(field, "Windows.Win32.Foundation.Metadata", "ConstantAttribute");
 							if (!attribute)
