@@ -3,6 +3,7 @@
 namespace PSDK {}
 
 #include "win32/Windows.Win32.Test.Constants.h"
+#include "win32/Windows.Win32.Test.Platform.h"
 #include "win32/impl/EnumFromUdtConst.h"
 
 namespace constants = win32::Windows::Win32::Test::Constants;
@@ -24,5 +25,13 @@ static_assert(::LEGACY_RESOURCE == 1);
 static_assert(std::is_enum_v<decltype(::LEGACY_FAILURE)>);
 static_assert(std::is_enum_v<decltype(::LEGACY_TREE)>);
 static_assert(std::is_enum_v<decltype(::LEGACY_RESOURCE)>);
+
+#if defined(_M_IX86)
+static_assert(sizeof(FLOATOBJ) == 8);
+static_assert(sizeof(FLOATOBJ_XFORM) == 48);
+#else
+static_assert(std::is_same_v<FLOATOBJ, float>);
+static_assert(sizeof(FLOATOBJ_XFORM) == 24);
+#endif
 
 int main() { return 0; }

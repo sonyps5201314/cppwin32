@@ -9,6 +9,11 @@ namespace Windows.Win32.Foundation.Metadata
     }
 
     public class NativeTypedefAttribute : Attribute { }
+    [Flags] public enum Architecture { X86 = 1, X64 = 2, Arm64 = 4, All = 7 }
+    public class SupportedArchitectureAttribute : Attribute
+    {
+        public SupportedArchitectureAttribute(Architecture value) { }
+    }
 }
 
 namespace Windows.Win32.Foundation
@@ -67,5 +72,29 @@ namespace Windows.Win32.Test.Constants
         public const uint LEGACY_RESOURCE = 1;
 
         public const uint UNTYPED = 7;
+    }
+}
+
+namespace Windows.Win32.Test.Platform
+{
+    [SupportedArchitecture(Architecture.X86)]
+    public struct FLOATOBJ { public uint First; public uint Second; }
+
+    [NativeTypedef]
+    [SupportedArchitecture(Architecture.X64 | Architecture.Arm64)]
+    public struct FLOATOBJ____1 { public float Value; }
+
+    [SupportedArchitecture(Architecture.X86)]
+    public struct FLOATOBJ_XFORM
+    {
+        public FLOATOBJ First; public FLOATOBJ Second; public FLOATOBJ Third;
+        public FLOATOBJ Fourth; public FLOATOBJ Fifth; public FLOATOBJ Sixth;
+    }
+
+    [SupportedArchitecture(Architecture.X64 | Architecture.Arm64)]
+    public struct FLOATOBJ_XFORM____1
+    {
+        public FLOATOBJ____1 First; public FLOATOBJ____1 Second; public FLOATOBJ____1 Third;
+        public FLOATOBJ____1 Fourth; public FLOATOBJ____1 Fifth; public FLOATOBJ____1 Sixth;
     }
 }

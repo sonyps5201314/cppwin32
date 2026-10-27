@@ -204,7 +204,10 @@ namespace cppwin32
 
         if (IsCppTypedef(type))
         {
+            auto arches = GetSupportedArchitectures(type);
+            check_for_write_defined_arches__part_head(w, arches);
             w.WriteCppTypedef(type);
+            check_for_write_defined_arches__part_tail(w, arches);
         }
         else
         {
