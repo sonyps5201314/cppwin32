@@ -4,7 +4,7 @@ $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $output = Join-Path $PSScriptRoot 'obj'
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $winmd = Join-Path $output 'Windows.Win32.winmd'
-& $Emitter --sourceDir (Join-Path $PSScriptRoot 'input') --arch x64 --outputFileName $winmd
+& $Emitter --sourceDir (Join-Path $PSScriptRoot 'input') --arch x64 --outputFileName $winmd "@$(Join-Path $PSScriptRoot 'input\emitter.settings.rsp')"
 if ($LASTEXITCODE -ne 0) { throw '测试 winmd 生成失败' }
 
 Push-Location (Join-Path $repo 'cppwin32')

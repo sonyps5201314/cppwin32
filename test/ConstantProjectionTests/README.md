@@ -1,4 +1,4 @@
-# typedef 字面常量投影回归测试
+# typedef 常量、架构及接口类型投影回归测试
 
 运行前使用 devenv.com 构建 cppwin32 的 Debug|x64，并准备同级 win32metadata 的 net10.0 发射器，然后执行：
 
@@ -16,6 +16,7 @@
 - 未使用 typedef 的普通常量保持原有输出。
 - 架构受限的 NativeTypedef 在前置声明处也保留条件；FLOATOBJ 在 x86 为8字节结构体，在 x64 为 float，FLOATOBJ_XFORM 分别为48和24字节。
 - HRESULT、HTREEITEM 和整数资源标识符的已有全局枚举接口保持兼容。
+- 原生 Boolean 保留16位有符号别名，托管 bool 仍为 bool；条件 BYTE/DWORD 占位声明恢复图像类型及原有指针层数，标量枚举通过明确的成员映射恢复。
 
 算术 typedef 判定沿唯一实例 Value 字段解析，排除指针、数组、非 typedef 和循环。HRESULT、NTSTATUS、BOOL、VARIANT_BOOL、BOOLEAN、DEVPROP_BOOLEAN、HTREEITEM、SOCKET、WSAEVENT 保持历史枚举策略；这些类型在 LASTOK 中已经使用该接口，不属于此次新增 typedef 造成的回退。
 

@@ -98,3 +98,27 @@ namespace Windows.Win32.Test.Platform
         public FLOATOBJ____1 Fourth; public FLOATOBJ____1 Fifth; public FLOATOBJ____1 Sixth;
     }
 }
+
+namespace Windows.Win32.Test.InterfaceProjection
+{
+    [NativeTypedef]
+    public struct PixelFormat { public int Value; }
+
+    public enum InterpolationMode : int { Invalid = -1, Default = 0 }
+
+    [NativeTypedef]
+    public struct Image { public IntPtr Value; }
+
+    public struct EncoderParameters { public uint Count; }
+
+    public unsafe struct ProjectionProbe
+    {
+        [NativeTypeName("Boolean *")] public short* Transactional;
+        public bool ManagedBoolean;
+        [NativeTypeName("PixelFormat *")] public uint* Format;
+        [NativeTypeName("InterpolationMode")] public uint Hints;
+        [NativeTypeName("EncoderParameters **")] public byte** Encoders;
+        [NativeTypeName("Image **")] public byte** Frames;
+        [NativeTypeName("Image *")] public byte* Frame;
+    }
+}

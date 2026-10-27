@@ -1,0 +1,2 @@
+--memberRemap
+ProjectionProbe::Hints=Windows.Win32.Test.InterfaceProjection.InterpolationMode
