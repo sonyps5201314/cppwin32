@@ -456,6 +456,58 @@ namespace cppwin32
         }
     }
 
+    bool is_interface_typedef(TypeDef type, Architecture arches)
+    {
+        if (!type || !IsCppTypedef(type)) return false;
+        auto usable = get_attribute(type, "Windows.Win32.Foundation.Metadata", "AlsoUsableForAttribute");
+        if (!usable) return false;
+        auto const attribute_signature = usable.Value();
+        auto const& arguments = attribute_signature.FixedArgs();
+        if (arguments.size() != 1) return false;
+        auto target_name = std::get<std::string_view>(std::get<ElemSig>(arguments[0].value).value);
+        Field value;
+        for (auto const& field : type.FieldList())
+        {
+            if (field.Flags().Static()) continue;
+            if (value || field.Name() != "Value") return false;
+            value = field;
+        }
+        if (!value) return false;
+        auto const signature = value.Signature();
+        auto const& field_type = signature.Type();
+        if (field_type.ptr_count() != 0 || field_type.is_array()) return false;
+        auto index = std::get_if<coded_index<TypeDefOrRef>>(&field_type.Type());
+        if (!index) return false;
+        auto target = find(*index, arches);
+        if (!target || get_category(target) != category::interface_type) return false;
+        return target_name == std::string(target.TypeNamespace()) + "." + std::string(target.TypeDisplayName());
+    }
+
+    bool is_enum_typedef(TypeDef type, Architecture arches)
+    {
+        std::vector<TypeDef> visited;
+        while (type && IsCppTypedef(type))
+        {
+            if (std::find(visited.begin(), visited.end(), type) != visited.end()) return false;
+            visited.push_back(type);
+            Field value;
+            for (auto const& field : type.FieldList())
+            {
+                if (field.Flags().Static()) continue;
+                if (value || field.Name() != "Value") return false;
+                value = field;
+            }
+            if (!value) return false;
+            auto const signature = value.Signature();
+            auto const& value_type = signature.Type();
+            if (value_type.ptr_count() != 0 || value_type.is_array() || value_type.is_szarray()) return false;
+            auto const index = std::get_if<coded_index<TypeDefOrRef>>(&value_type.Type());
+            if (!index) return false;
+            type = find(*index, arches);
+        }
+        return type && get_category(type) == category::enum_type;
+    }
+
     bool is_guid_type(coded_index<TypeDefOrRef> type, Architecture arches)
     {
         std::vector<TypeDef> visited;

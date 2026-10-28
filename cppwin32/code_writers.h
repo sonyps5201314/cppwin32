@@ -379,47 +379,35 @@ namespace cppwin32
 		{
 			if (auto const field_type = std::get_if<coded_index<TypeDefOrRef>>(&row_signature.Type().Type()))
 			{
-				if (field_type->type() == TypeDefOrRef::TypeRef)
-				{
-					auto field_type_ref = field_type->TypeRef();
-					auto type_name = field_type_ref.TypeDisplayName();
-					int i = 0;
-					for (auto ftd : writer::ForceTypeDefs)
-					{
-						if (type_name == ftd.name)
-						{
-							type_name = writer::ForceTypeDefs_Const[i].name;
-
-							if (!IsHiddenTypeNamespace(field_type_ref))
-							{
-								if (w.full_namespace)
-								{
-									result = w.write_temp("win32::");
-								}
-								result += w.write_temp("@::", field_type_ref.TypeNamespace());
-							}
-							result += w.write_temp(type_name);
+                auto type_name = field_type->type() == TypeDefOrRef::TypeDef
+                    ? field_type->TypeDef().TypeDisplayName() : field_type->TypeRef().TypeDisplayName();
+                for (size_t i = 0; i < std::size(writer::ForceTypeDefs); ++i)
+                {
+                    if (type_name == writer::ForceTypeDefs[i].name)
+                    {
+                        auto type_def = field_type->type() == TypeDefOrRef::TypeDef
+                            ? field_type->TypeDef() : find(field_type->TypeRef(), arches);
+                        if (!type_def)
+                        {
+                            assert(false);
+                            break;
+                        }
+                        if (!IsHiddenTypeNamespace(type_def))
+                        {
+                            if (w.full_namespace)
+                            {
+                                result = "win32::";
+                            }
+                            result += w.write_temp("@::", type_def.TypeNamespace());
+                        }
+                        result += writer::ForceTypeDefs_Const[i].name;
+                        result.append(row_signature.Type().ptr_count(), '*');
 							//因为不是以row_signature.Type()为参数(TypeSig类型)调用的w.write_temp，所以需要下面这样手动添加依赖
-							auto field_type_def = find(field_type_ref, arches);
-							if (field_type_def)
-							{
-								w.add_depends(field_type_def);
-							}
-							else
-							{
-								assert(false);
-							}
-
-							outputed = true;
-							break;
-						}
-						i++;
-					}
-				}
-				else
-				{
-					//TypeDef类型的我们暂时不需要干预输出
-				}
+                        w.add_depends(type_def);
+                        outputed = true;
+                        break;
+                    }
+                }
 			}
 
 			if (!outputed)
@@ -917,14 +905,29 @@ namespace cppwin32
         }
     }
 
+    template <typename ROW, typename SIGNATURE>
+    void write_parameter_declaration(writer& w, ROW const& param, SIGNATURE const& signature)
+    {
+        auto type_string = get_row_type_string(w, param, signature);
+        auto incomplete_array = get_attribute(param, "Windows.Win32.Foundation.Metadata", "IncompleteArrayAttribute");
+        if (incomplete_array && !type_string.empty() && type_string.back() == '*')
+        {
+            type_string.pop_back();
+            w.write("% %[]", type_string, param.Name());
+        }
+        else
+        {
+            w.write("% %", type_string, param.Name());
+        }
+    }
+
     void write_abi_params(writer& w, method_signature const& method_signature)
     {
         separator s{ w };
         for (auto&& [param, param_signature] : method_signature.params())
         {
             s();
-            auto type_string = get_row_type_string(w, param, *param_signature);
-            w.write("% %", type_string, param.Name());
+            write_parameter_declaration(w, param, *param_signature);
         }
     }
 
@@ -1042,8 +1045,7 @@ namespace cppwin32
         for (auto&& [param, param_signature] : method_signature.params())
         {
             s();
-            auto type_string = get_row_type_string(w, param, *param_signature);
-            w.write("% %", type_string, param.Name());
+            write_parameter_declaration(w, param, *param_signature);
         }
 		if (method_signature.method().Signature().CallConvention() == CallingConvention::VarArg)
 		{
@@ -1149,6 +1151,11 @@ namespace cppwin32
 						auto field_type_def = find(*field_type, arches);
 						if (field_type_def && get_category(field_type_def) == category::struct_type)
 						{
+                                if (is_enum_typedef(field_type_def, arches))
+                                {
+                                    w.write("    inline constexpr % % = static_cast<%>(%);\n", *field_type, field.Name(), *field_type, constant);
+                                    continue;
+                                }
                                 if (is_arithmetic_typedef(field_type_def, arches)
                                     && !uses_legacy_constant_enum(field_type_def))
                                 {
@@ -1257,8 +1264,7 @@ namespace cppwin32
         for (auto&& [param, param_signature] : method_signature.params())
         {
             s();
-			auto type_string = get_row_type_string(w, param, *param_signature);
-			w.write("% %", type_string, param.Name());
+			write_parameter_declaration(w, param, *param_signature);
         }
     }
 

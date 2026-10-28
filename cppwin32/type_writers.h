@@ -504,7 +504,7 @@ namespace cppwin32
                     {
                         write('*');
                     }
-                    if (signature.element_type() == ElementType::Class)
+                    if (signature.element_type() == ElementType::Class || (type_def && is_interface_typedef(type_def, GetSupportedArchitectures(type_def))))
                     {
                         if (cat == (category)-1)
                         {
@@ -611,9 +611,17 @@ namespace cppwin32
                     std::map<std::string_view, std::set<TypeDef, depends_compare>> depends;
                     pdepends_In_WriteCppTypedef = &depends;
 
-					auto str_typedef = write_temp("    typedef % %;\n",
-						field_type,
-                        type_name);
+                    std::string array_suffix;
+                    if (field_type.is_array())
+                    {
+                        for (auto size : field_type.array_sizes())
+                        {
+                            array_suffix += write_temp("[%]", size);
+                        }
+                    }
+                    auto str_typedef = is_interface_typedef(type, GetSupportedArchitectures(type))
+                        ? write_temp("    typedef % %;\n", std::get<coded_index<TypeDefOrRef>>(field_type.Type()), type_name)
+                        : write_temp("    typedef % %%;\n", field_type, type_name, array_suffix);
                     
                     pdepends_In_WriteCppTypedef = Last_pdepends_In_WriteCppTypedef;
 

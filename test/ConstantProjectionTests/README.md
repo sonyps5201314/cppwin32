@@ -18,6 +18,11 @@
 - HRESULT、HTREEITEM 和整数资源标识符的已有全局枚举接口保持兼容。
 - 原生 Boolean 保留16位有符号别名，托管 bool 仍为 bool；条件 BYTE/DWORD 占位声明恢复图像类型及原有指针层数，标量枚举通过明确的成员映射恢复。
 
+- 枚举别名可以用于所属命名空间的 constexpr 常量，值使用明确的枚举转换。
+- HANDLE_PTR 使用平台指针宽度；LPVOID 保持 void*，固定 FLOAT[3][4] 保持连续的 48 字节数组。
+- DOT11_MAC_ADDRESS、SpatialAudioHrtfOrientation 保留数组范围，PDOT11_MAC_ADDRESS 为指向数组的指针；外层数组不重复累计元素数。
+- GetNameIdMap 的字符串别名保留显式指针及数组退化，精确函数指针类型为 wchar_t const***。
+
 算术 typedef 判定沿唯一实例 Value 字段解析，排除指针、数组、非 typedef 和循环。HRESULT、NTSTATUS、BOOL、VARIANT_BOOL、BOOLEAN、DEVPROP_BOOLEAN、HTREEITEM、SOCKET、WSAEVENT 保持历史枚举策略；这些类型在 LASTOK 中已经使用该接口，不属于此次新增 typedef 造成的回退。
 
 生成文件、winmd、日志和可执行文件均位于测试目录的 obj 子目录，不提交。

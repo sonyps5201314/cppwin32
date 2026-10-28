@@ -1,4 +1,5 @@
 using System;
+using DllImport = System.Runtime.InteropServices.DllImportAttribute;
 using Windows.Win32.Foundation.Metadata;
 
 namespace Windows.Win32.Foundation.Metadata
@@ -9,6 +10,8 @@ namespace Windows.Win32.Foundation.Metadata
     }
 
     public class NativeTypedefAttribute : Attribute { }
+    public class ConstAttribute : Attribute { }
+    public class IncompleteArrayAttribute : Attribute { }
     [Flags] public enum Architecture { X86 = 1, X64 = 2, Arm64 = 4, All = 7 }
     public class SupportedArchitectureAttribute : Attribute
     {
@@ -23,6 +26,9 @@ namespace Windows.Win32.Foundation
 
     [NativeTypedef]
     public unsafe struct PWSTR { public ushort* Value; }
+
+    [NativeTypedef]
+    public struct HANDLE_PTR { public UIntPtr Value; }
 }
 
 namespace Windows.Win32.UI.Controls
@@ -102,6 +108,20 @@ namespace Windows.Win32.Test.Platform
 namespace Windows.Win32.Test.InterfaceProjection
 {
     [NativeTypedef]
+    public unsafe struct DOT11_MAC_ADDRESS { public fixed byte Value[6]; }
+
+    [NativeTypedef]
+    public unsafe struct PDOT11_MAC_ADDRESS { public DOT11_MAC_ADDRESS* Value; }
+
+    [NativeTypedef]
+    public unsafe struct SpatialAudioHrtfOrientation { public fixed float Value[9]; }
+
+    public enum NativeMode : uint { One = 1 }
+
+    [NativeTypedef]
+    public struct MODE_ALIAS { public NativeMode Value; }
+
+    [NativeTypedef]
     public struct PixelFormat { public int Value; }
 
     public enum InterpolationMode : int { Invalid = -1, Default = 0 }
@@ -120,5 +140,22 @@ namespace Windows.Win32.Test.InterfaceProjection
         [NativeTypeName("EncoderParameters **")] public byte** Encoders;
         [NativeTypeName("Image **")] public byte** Frames;
         [NativeTypeName("Image *")] public byte* Frame;
+        [NativeTypeName("HANDLE_PTR")] public uint PortableHandle;
+        [NativeTypeName("MODE_ALIAS")] public NativeMode Mode;
+        [NativeTypeName("LPVOID")] public byte* Bytes;
+        [NativeTypeName("LPVOID")] public void* Address;
+        [NativeTypeName("FLOAT[3][4]")] public fixed float Transform[3 * 4];
+        [NativeTypeName("DOT11_MAC_ADDRESS")] public fixed byte MacAddress[6];
+        [NativeTypeName("DOT11_MAC_ADDRESS[2]")] public fixed byte MacAddresses[2 * 6];
+        [NativeTypeName("PDOT11_MAC_ADDRESS")] public byte** MacPointer;
+        [NativeTypeName("SpatialAudioHrtfOrientation *")] public float** Orientation;
+    }
+
+    public static unsafe class Apis
+    {
+        [NativeTypeName("MODE_ALIAS")] public const uint MODE_ONE = 1;
+
+        [DllImport("projection.dll")]
+        public static extern int GetNameIdMap([NativeTypeName("LPCWSTR *[]")] [IncompleteArray] ushort*** names);
     }
 }

@@ -36,6 +36,25 @@ static_assert(std::is_same_v<decltype(ProjectionProbe::Hints), InterpolationMode
 static_assert(std::is_same_v<decltype(ProjectionProbe::Encoders), EncoderParameters**>);
 static_assert(std::is_same_v<decltype(ProjectionProbe::Frames), Image**>);
 static_assert(std::is_same_v<decltype(ProjectionProbe::Frame), Image*>);
+static_assert(sizeof(HANDLE_PTR) == sizeof(void*));
+static_assert(std::is_same_v<decltype(ProjectionProbe::PortableHandle), HANDLE_PTR>);
+static_assert(std::is_same_v<LPVOID, void*>);
+static_assert(std::is_same_v<decltype(ProjectionProbe::Mode), MODE_ALIAS>);
+static_assert(std::extent_v<decltype(ProjectionProbe::Transform)> == 12);
+static_assert(sizeof(ProjectionProbe::Transform) == sizeof(float) * 12);
+static_assert(std::is_same_v<std::remove_extent_t<decltype(ProjectionProbe::Transform)>, FLOAT>);
+namespace projection = win32::Windows::Win32::Test::InterfaceProjection;
+static_assert(projection::MODE_ONE == NativeMode::One);
+static_assert(std::is_same_v<std::remove_cv_t<decltype(projection::MODE_ONE)>, MODE_ALIAS>);
+using name_map_function = int32_t(__stdcall*)(wchar_t const***);
+static_assert(std::is_same_v<decltype(&projection::GetNameIdMap), name_map_function>);
+static_assert(sizeof(DOT11_MAC_ADDRESS) == 6);
+static_assert(sizeof(SpatialAudioHrtfOrientation) == sizeof(float) * 9);
+static_assert(std::is_same_v<PDOT11_MAC_ADDRESS, uint8_t(*)[6]>);
+static_assert(std::is_same_v<decltype(ProjectionProbe::MacPointer), PDOT11_MAC_ADDRESS>);
+static_assert(std::extent_v<decltype(ProjectionProbe::MacAddresses), 0> == 2);
+static_assert(std::extent_v<decltype(ProjectionProbe::MacAddresses), 1> == 6);
+static_assert(std::is_same_v<decltype(ProjectionProbe::Orientation), float(*)[9]>);
 
 #if defined(_M_IX86)
 static_assert(sizeof(FLOATOBJ) == 8);
