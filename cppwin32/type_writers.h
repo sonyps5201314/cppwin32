@@ -625,10 +625,30 @@ namespace cppwin32
                     
                     pdepends_In_WriteCppTypedef = Last_pdepends_In_WriteCppTypedef;
 
-					for (auto&& depends : depends)
-					{
-						write_each<write_forward>(depends.second);
-					}
+                    for (auto const& [ns, definitions] : depends)
+                    {
+                        for (auto const& definition : definitions)
+                        {
+                            auto const& namespaces = definition.get_cache().namespaces();
+                            auto entry = namespaces.find(ns);
+                            if (entry == namespaces.end())
+                            {
+                                write_forward(*this, definition);
+                                continue;
+                            }
+
+                            auto const& members = entry->second;
+                            auto variants = members.types_same_name.find(definition.TypeDisplayName());
+                            if (variants == members.types_same_name.end())
+                            {
+                                write_forward(*this, definition);
+                            }
+                            else
+                            {
+                                write_each<write_forward>(variants->second);
+                            }
+                        }
+                    }
 
                     {
 						auto guard = wrap_type_namespace(*this, type.TypeNamespace(), IsHiddenTypeNamespace(type));

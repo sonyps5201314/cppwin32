@@ -10,6 +10,7 @@ namespace Windows.Win32.Foundation.Metadata
     }
 
     public class NativeTypedefAttribute : Attribute { }
+    public class MetadataTypedefAttribute : Attribute { }
     public class ConstAttribute : Attribute { }
     public class IncompleteArrayAttribute : Attribute { }
     [Flags] public enum Architecture { X86 = 1, X64 = 2, Arm64 = 4, All = 7 }
@@ -158,4 +159,23 @@ namespace Windows.Win32.Test.InterfaceProjection
         [DllImport("projection.dll")]
         public static extern int GetNameIdMap([NativeTypeName("LPCWSTR *[]")] [IncompleteArray] ushort*** names);
     }
+}
+
+namespace Windows.Win32.Test.ForwardDeclarations
+{
+    [NativeTypedef]
+    public unsafe struct PPACKET { public PACKET* Value; }
+
+    [MetadataTypedef]
+    public unsafe struct MPACKET { public PACKET* Value; }
+
+    [NativeTypedef]
+    public unsafe struct PPPACKET { public PPACKET* Value; }
+
+    [SupportedArchitecture(Architecture.X64 | Architecture.Arm64)]
+    public struct PACKET { public ulong Address; public uint Tag; }
+
+    [SupportedArchitecture(Architecture.X86)]
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 1)]
+    public struct PACKET____1 { public uint Address; public uint Tag; }
 }

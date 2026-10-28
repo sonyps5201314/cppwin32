@@ -2,6 +2,7 @@
 
 namespace PSDK {}
 
+#include "win32/impl/Windows.Win32.Test.ForwardDeclarations.0.h"
 #include "win32/Windows.Win32.Test.Constants.h"
 #include "win32/Windows.Win32.Test.Platform.h"
 #include "win32/Windows.Win32.Test.InterfaceProjection.h"
@@ -62,6 +63,17 @@ static_assert(sizeof(FLOATOBJ_XFORM) == 48);
 #else
 static_assert(std::is_same_v<FLOATOBJ, float>);
 static_assert(sizeof(FLOATOBJ_XFORM) == 24);
+#endif
+
+static_assert(std::is_same_v<PPACKET, PACKET*>);
+static_assert(std::is_same_v<MPACKET, PACKET*>);
+static_assert(std::is_same_v<PPPACKET, PACKET**>);
+#if defined(_M_IX86)
+static_assert(sizeof(PACKET) == 8);
+static_assert(alignof(PACKET) == 1);
+#else
+static_assert(sizeof(PACKET) == 16);
+static_assert(alignof(PACKET) == 8);
 #endif
 
 int main() { return 0; }
