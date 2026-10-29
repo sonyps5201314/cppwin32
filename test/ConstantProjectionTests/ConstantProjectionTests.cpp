@@ -1,8 +1,20 @@
+#pragma warning(error: 4005)
+
+#if defined(CPPWIN32_VERIFY_MACRO_CONFLICT)
+#define SDK_RECORD SDK_OTHER
+#else
+#define SDK_RECORD SDK_RECORD_STRUCT
+#endif
+
 #include <type_traits>
 
 namespace PSDK {}
 
 #include "win32/impl/Windows.Win32.Test.ForwardDeclarations.0.h"
+#include "win32/Windows.Win32.Test.NativeOrigins.h"
+#include "win32/Windows.Win32.Test.Bitfields.h"
+#include "win32/Windows.Win32.Test.Primitives.h"
+#include "win32/Windows.Win32.Test.NativeCallbacks.h"
 #include "win32/Windows.Win32.Test.Constants.h"
 #include "win32/Windows.Win32.Test.Platform.h"
 #include "win32/Windows.Win32.Test.InterfaceProjection.h"
@@ -75,5 +87,60 @@ static_assert(alignof(PACKET) == 1);
 static_assert(sizeof(PACKET) == 16);
 static_assert(alignof(PACKET) == 8);
 #endif
+
+#ifndef SDK_RECORD
+#error SDK_RECORD must remain a macro
+#endif
+#ifndef SDK_RECORD_CHAIN
+#error SDK_RECORD_CHAIN must remain a macro
+#endif
+static_assert(std::is_same_v<_SDK_RECORD, SDK_RECORD_STRUCT>);
+static_assert(std::is_same_v<SDK_RECORD_ALIAS, SDK_RECORD_STRUCT>);
+static_assert(std::is_same_v<SDK_RECORD_CHAIN, SDK_RECORD_STRUCT>);
+static_assert(std::is_same_v<decltype(OriginHolder::Record), SDK_RECORD_STRUCT*>);
+static_assert(std::is_same_v<decltype(OriginHolder::Other), SDK_OTHER*>);
+static_assert(sizeof(SDK_RECORD_STRUCT) == sizeof(int));
+
+static_assert(sizeof(COLLISION_STRUCT) == sizeof(int));
+static_assert(std::is_same_v<COLLISION, COLLISION_STRUCT>);
+static_assert(sizeof(ANONYMOUS_STRUCT) == sizeof(int));
+static_assert(std::is_same_v<ANONYMOUS, ANONYMOUS_STRUCT>);
+
+#ifndef PUBLIC_BARE_RECORD
+#error PUBLIC_BARE_RECORD must remain a macro
+#endif
+static_assert(std::is_same_v<PUBLIC_BARE_RECORD, BareTag>);
+static_assert(sizeof(PUBLIC_BARE_RECORD) == sizeof(int));
+
+static_assert(std::is_same_v<ManagedTagOnly, ActualBareTag>);
+static_assert(sizeof(ManagedTagOnly) == sizeof(int));
+
+static_assert(sizeof(BitfieldAliases) == 1);
+static_assert(sizeof(WideBitfields) == 8);
+static_assert(sizeof(SignedBitfields) == 4);
+static_assert(sizeof(LegacyBitfields) == 4);
+static_assert(std::is_same_v<decltype(SignedBitfields::Signed), int>);
+static_assert(std::is_same_v<decltype(SignedBitfields::Unsigned), unsigned int>);
+
+static_assert(std::is_same_v<decltype(PrimitiveProbe::NativeLong), long>);
+static_assert(std::is_same_v<decltype(PrimitiveProbe::NativeUnsignedLong), unsigned long>);
+static_assert(std::is_same_v<decltype(PrimitiveProbe::Words), unsigned short const*>);
+static_assert(std::is_same_v<PrimitiveCallback, unsigned long(__stdcall*)(long*)>);
+namespace primitives = win32::Windows::Win32::Test::Primitives;
+static_assert(std::is_same_v<decltype(&primitives::PrimitiveMethod), long(__cdecl*)(long*, int)>);
+static_assert(std::is_same_v<decltype(&primitives::PrimitiveVoid), void(__stdcall*)(long*, int)>);
+static_assert(std::is_same_v<std::remove_cv_t<decltype(primitives::PLAIN_UNSIGNED)>, unsigned int>);
+
+using native_callback = int(__stdcall*)(int);
+using native_cdecl_callback = int(__cdecl*)(int);
+using native_nested_callback = int(__cdecl*)(void(__stdcall*)(int));
+static_assert(std::is_same_v<decltype(InlineCallbacks::First), native_cdecl_callback>);
+static_assert(std::is_same_v<decltype(InlineCallbacks::Second), native_callback>);
+static_assert(std::is_same_v<decltype(InlineCallbacks::Nested), native_nested_callback>);
+static_assert(std::is_same_v<decltype(InlineCallbacks::Array), int(*)[4]>);
+static_assert(std::is_same_v<CdeclCallback, native_cdecl_callback>);
+namespace native_callbacks = win32::Windows::Win32::Test::NativeCallbacks;
+static_assert(std::is_same_v<decltype(&native_callbacks::Register), void(__stdcall*)(native_callback)>);
+static_assert(std::is_same_v<decltype(&native_callbacks::GetCallback), native_callback(__stdcall*)()>);
 
 int main() { return 0; }

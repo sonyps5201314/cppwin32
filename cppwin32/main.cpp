@@ -7,6 +7,7 @@
 #include "text_writer.h"
 #include "type_dependency_graph.h"
 #include "type_writers.h"
+#include "native_declaration_writer.h"
 #include "code_writers.h"
 #include "file_writers.h"
 #include <unordered_set>
@@ -24,6 +25,7 @@ namespace cppwin32
         { "input", 0, option::no_max, "<spec>", "Windows metadata to include in projection" },
         { "reference", 0, option::no_max, "<spec>", "Windows metadata to reference from projection" },
         { "output", 0, 1, "<path>", "Location of generated projection and component templates" },
+        { "contracts", 0, 1, "<path>", "输出原生复杂声明的编译验收头文件" },
         { "verbose", 0, 0, {}, "Show detailed progress information" },
         { "pch", 0, 1, "<name>", "Specify name of precompiled header file (defaults to pch.h)" },
         { "include", 0, option::no_max, "<prefix>", "One or more prefixes to include in input" },
@@ -74,6 +76,7 @@ Where <spec> is one or more of:
     static void process_args(reader const& args)
     {
         settings.verbose = args.exists("verbose");
+        settings.contract_file = args.value("contracts");
         settings.fastabi = args.exists("fastabi");
 
         settings.input = args.files("input", database::is_database);
@@ -182,6 +185,10 @@ Where <spec> is one or more of:
                     CheckForHideTypeNamespace(s.second, ns);
                 }
             }
+
+            native_declarations.initialize(c);
+            native_declarations.write_header();
+            if (!settings.contract_file.empty()) write_native_contracts(c, settings.contract_file);
 
             for (auto&& [ns, members] : c.namespaces())
             {

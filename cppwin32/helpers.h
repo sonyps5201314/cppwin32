@@ -99,7 +99,7 @@ namespace cppwin32
         {
             auto params = method.ParamList();
 
-            if (m_signature.ReturnType() && params.first != params.second && params.first.Sequence() == 0)
+            if (params.first != params.second && params.first.Sequence() == 0)
             {
                 m_return = params.first;
                 ++params.first;
@@ -386,6 +386,50 @@ namespace cppwin32
     {
         return get_attribute(type, "Windows.Win32.Foundation.Metadata", "NativeTypedefAttribute")
             || get_attribute(type, "Windows.Win32.Foundation.Metadata", "MetadataTypedefAttribute");
+    }
+
+    struct native_record_origin
+    {
+        bool present = false;
+        std::string_view tag;
+        std::vector<std::string_view> typedefs;
+        std::vector<std::pair<std::string_view, std::string_view>> macros;
+    };
+
+    native_record_origin get_native_record_origin(TypeDef const& type)
+    {
+        native_record_origin result;
+        for (auto const& attribute : type.CustomAttribute())
+        {
+            auto const name = attribute.TypeNamespaceAndName();
+            if (name.first != "Windows.Win32.Foundation.Metadata" ||
+                (name.second != "NativeRecordAttribute" && name.second != "NativeMacroAliasAttribute")) continue;
+            auto const signature = attribute.Value();
+            auto const& args = signature.FixedArgs();
+            if (args.size() != 2) throw std::invalid_argument("Invalid native type origin attribute");
+            auto first = std::get<std::string_view>(std::get<ElemSig>(args[0].value).value);
+            auto second = std::get<std::string_view>(std::get<ElemSig>(args[1].value).value);
+            if (name.second == "NativeRecordAttribute")
+            {
+                result.present = true;
+                result.tag = first;
+                if (!second.empty()) result.typedefs.push_back(second);
+            }
+            else result.macros.emplace_back(first, second);
+        }
+        return result;
+    }
+
+    std::string_view get_cpp_type_name(TypeDef const& type)
+    {
+        auto const origin = get_native_record_origin(type);
+        auto const managed = type.TypeDisplayName();
+        if (origin.present && !origin.typedefs.empty() && std::find(origin.typedefs.begin(), origin.typedefs.end(), managed) == origin.typedefs.end())
+        {
+            if (std::none_of(origin.macros.begin(), origin.macros.end(), [&](auto const& macro) { return macro.first == managed; }))
+                return origin.typedefs.empty() ? origin.tag : origin.typedefs.front();
+        }
+        return managed;
     }
 
     bool uses_legacy_constant_enum(TypeDef const& type)

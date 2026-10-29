@@ -241,4 +241,75 @@ namespace cppwin32
 
         w.flush_to_file(settings.output_folder + "win32/impl/complex_interfaces.h");
     }
+
+    static void write_native_contracts(cache const& metadata, std::string const& path)
+    {
+        writer output;
+        size_t count = 0;
+        auto add = [&](auto const& row, Architecture architecture)
+        {
+            auto attribute = get_attribute(row, "Windows.Win32.Foundation.Metadata", "NativeDeclaratorAttribute");
+            if (!attribute) return;
+            auto value = attribute.Value();
+            auto dependencies = native_declaration_catalog::argument(value, 1);
+            size_t begin = 0;
+            while (begin < dependencies.size())
+            {
+                auto end = dependencies.find(';', begin);
+                auto name = dependencies.substr(begin, end == std::string::npos ? end : end - begin);
+                auto definition = row.get_database().get_cache().find(name);
+                if (definition && definition.TypeDisplayName() != "WCHAR") output.add_depends(definition);
+                if (end == std::string::npos) break;
+                begin = end + 1;
+            }
+            check_for_write_defined_arches__part_head(output, architecture);
+            auto name = std::string("NativeContract_") + std::to_string(count++);
+            output.write("typedef %;\n", native_declaration(native_declaration_catalog::argument(value, 0), name));
+            check_for_write_defined_arches__part_tail(output, architecture);
+        };
+        std::set<database const*> databases;
+        for (auto const& entry : metadata.namespaces())
+            for (auto const& item : entry.second.types) databases.insert(&item.second.get_database());
+        for (auto db : databases)
+            for (auto const& type : db->TypeDef)
+            {
+                auto architecture = GetSupportedArchitectures(type);
+                auto parent = type;
+                while (architecture == Architecture::None && is_nested(parent))
+                {
+                    parent = parent.EnclosingType();
+                    architecture = GetSupportedArchitectures(parent);
+                }
+                for (auto const& field : type.FieldList()) add(field, architecture);
+                for (auto const& method : type.MethodList())
+                {
+                    auto method_architecture = GetSupportedArchitectures(method);
+                    if (method_architecture == Architecture::None) method_architecture = architecture;
+                    for (auto const& parameter : method.ParamList()) add(parameter, method_architecture);
+                }
+            }
+        output.swap();
+        output.write("#pragma once\nnamespace PSDK {}\n#include \"win32/base.h\"\n#include \"win32/impl/native_declarations.h\"\n");
+        writer closure;
+        closure.depends = output.depends;
+        std::set<TypeDef> emitted;
+        while (true)
+        {
+            std::vector<TypeDef> pending;
+            for (auto const& entry : closure.depends)
+                for (auto const& type : entry.second) if (emitted.insert(type).second) pending.push_back(type);
+            if (pending.empty()) break;
+            for (auto const& type : pending) write_forward(closure, type);
+        }
+        for (auto const& type : emitted)
+            if (!IsCppTypedef(type) && get_category(type) != category::delegate_type) write_forward(output, type);
+        for (auto const& type : emitted)
+            if (IsCppTypedef(type)) write_forward(output, type);
+        dependency_sorter delegates;
+        for (auto const& type : emitted)
+            if (get_category(type) == category::delegate_type) delegates.add_delegate(type);
+        for (auto const& type : delegates.sort()) write_forward(output, type);
+        output.flush_to_file(path);
+    }
+
 }

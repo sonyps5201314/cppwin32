@@ -23,7 +23,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SdkHeadersRoot);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)obj;$(SdkHeadersRoot);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link><SubSystem>Console</SubSystem></Link>

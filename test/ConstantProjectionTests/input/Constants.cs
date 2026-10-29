@@ -4,6 +4,9 @@ using Windows.Win32.Foundation.Metadata;
 
 namespace Windows.Win32.Foundation.Metadata
 {
+    [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)] public class NativeAliasAttribute : Attribute { public NativeAliasAttribute(string name, string declaration, string canonical) { } }
+    public class NativeDeclaratorAttribute : Attribute { public NativeDeclaratorAttribute(string declaration, string dependencies) { } }
+    public class NativePrimitiveTypeAttribute : Attribute { public NativePrimitiveTypeAttribute(string name) { } }
     public class NativeTypeNameAttribute : Attribute
     {
         public NativeTypeNameAttribute(string value) { }
@@ -11,6 +14,11 @@ namespace Windows.Win32.Foundation.Metadata
 
     public class NativeTypedefAttribute : Attribute { }
     public class MetadataTypedefAttribute : Attribute { }
+    [AttributeUsage(AttributeTargets.Struct, AllowMultiple = true)] public class NativeRecordAttribute : Attribute { public NativeRecordAttribute(string tag, string alias) { } }
+    [AttributeUsage(AttributeTargets.Struct, AllowMultiple = true)] public class NativeMacroAliasAttribute : Attribute { public NativeMacroAliasAttribute(string name, string target) { } }
+    public class NativeRecordReferenceAttribute : Attribute { public NativeRecordReferenceAttribute(string name) { } }
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = true)] public class NativeBitfieldAttribute : Attribute { public NativeBitfieldAttribute(string name, long offset, long length) { } }
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = true)] public class NativeBitfieldTypeAttribute : Attribute { public NativeBitfieldTypeAttribute(string name, string typeNamespace, string typeName) { } }
     public class ConstAttribute : Attribute { }
     public class IncompleteArrayAttribute : Attribute { }
     [Flags] public enum Architecture { X86 = 1, X64 = 2, Arm64 = 4, All = 7 }
@@ -178,4 +186,119 @@ namespace Windows.Win32.Test.ForwardDeclarations
     [SupportedArchitecture(Architecture.X86)]
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 1)]
     public struct PACKET____1 { public uint Address; public uint Tag; }
+}
+
+namespace Windows.Win32.Test.NativeOrigins
+{
+    [NativeRecord("_SDK_RECORD", "SDK_RECORD_STRUCT")]
+    [NativeRecord("_SDK_RECORD", "SDK_RECORD_ALIAS")]
+    [NativeMacroAlias("SDK_RECORD", "SDK_RECORD_STRUCT")]
+    [NativeMacroAlias("SDK_RECORD_CHAIN", "SDK_RECORD")]
+    public struct SDK_RECORD { public int Value; }
+
+    [NativeRecord("_SDK_OTHER", "SDK_OTHER")]
+    [NativeRecord("_SDK_OTHER", "SDK_OTHER_ALIAS")]
+    public struct ManagedOther { public int Value; }
+
+    public unsafe struct OriginHolder
+    {
+        [NativeTypeName("SDK_RECORD_STRUCT *")] public SDK_RECORD* Record;
+        [NativeTypeName("SDK_OTHER *")] public ManagedOther* Other;
+        [NativeTypeName("SDK_OTHER_ALIAS *")] public ManagedOther* NamedAlias;
+    }
+}
+
+namespace Windows.Win32.Test.NativeOrigins
+{
+    [NativeRecord("COLLISION", "COLLISION_STRUCT")]
+    [NativeMacroAlias("COLLISION", "COLLISION_STRUCT")]
+    public struct COLLISION { public int Value; }
+
+    [NativeRecord("", "ANONYMOUS_STRUCT")]
+    [NativeMacroAlias("ANONYMOUS", "ANONYMOUS_STRUCT")]
+    public struct ANONYMOUS { public int Value; }
+}
+
+namespace Windows.Win32.Test.NativeOrigins
+{
+    [NativeRecord("BareTag", "")]
+    [NativeMacroAlias("PUBLIC_BARE_RECORD", "BareTag")]
+    public struct PUBLIC_BARE_RECORD { public int Value; }
+}
+
+namespace Windows.Win32.Test.NativeOrigins
+{
+    [NativeRecord("ActualBareTag", "")]
+    public struct ManagedTagOnly { public int Value; }
+}
+
+namespace Windows.Win32.Test.Bitfields
+{
+    public struct BitfieldAliases
+    {
+        [NativeBitfield("First", 0, 4), NativeBitfield("Second", 4, 4)] public byte _bitfield;
+        [NativeTypeName("UINT8 : 4")] public byte First { get => 0; }
+        [NativeTypeName("BYTE : 4")] public byte Second { get => 0; }
+    }
+    public struct WideBitfields
+    {
+        [NativeBitfield("StartupSuspend", 0, 1), NativeBitfield("Reserved", 1, 63)] public ulong _bitfield;
+        [NativeTypeName("UINT64 : 1")] public ulong StartupSuspend { get => 0; }
+        [NativeTypeName("UINT64 : 63")] public ulong Reserved { get => 0; }
+    }
+    public struct SignedBitfields
+    {
+        [NativeBitfield("Signed", 0, 4), NativeBitfield("Unsigned", 4, 28)] public uint _bitfield;
+        [NativeTypeName("int : 4")] public int Signed { get => 0; }
+        [NativeTypeName("unsigned int : 28")] public uint Unsigned { get => 0; }
+    }
+    public struct LegacyBitfields
+    {
+        [NativeBitfield("Value", 0, 32)] public uint _bitfield;
+    }
+}
+
+namespace Windows.Win32.Test.Primitives
+{
+    public unsafe struct PrimitiveProbe
+    {
+        [NativeTypeName("long")] public int NativeLong;
+        [NativeTypeName("unsigned long")] public uint NativeUnsignedLong;
+        [NativeTypeName("const unsigned short *")] public ushort* Words;
+        public int PlainInt;
+    }
+    public static unsafe class Apis
+    {
+        [DllImport("synthetic.dll", CallingConvention = System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        [return: NativeTypeName("long")]
+        public static extern int PrimitiveMethod([NativeTypeName("long *")] int* value, int plain);
+        [DllImport("synthetic.dll")]
+        [return: NativeTypeName("VOID")]
+        public static extern void PrimitiveVoid([NativeTypeName("long *")] int* first, int second);
+        public const uint PLAIN_UNSIGNED = 1001;
+        public const int PLAIN_SIGNED = -1;
+    }
+    [return: NativeTypeName("unsigned long")]
+    public unsafe delegate uint PrimitiveCallback([NativeTypeName("long *")] int* value);
+}
+
+namespace Windows.Win32.Test.NativeCallbacks
+{
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Cdecl)]
+    public delegate int CdeclCallback(int value);
+    public struct InlineCallbacks
+    {
+        [NativeTypeName("int (*)(int) __attribute__((cdecl))")] public IntPtr First;
+        [NativeTypeName("int (*)(int) __attribute__((stdcall))")] public IntPtr Second;
+        [NativeTypeName("int (*)(void (*)(int) __attribute__((stdcall))) __attribute__((cdecl))")] public IntPtr Nested;
+        [NativeTypeName("int (*)[4]")] public IntPtr Array;
+    }
+    public static class Apis
+    {
+        [DllImport("synthetic.dll")]
+        public static extern void Register([NativeTypeName("int (*)(int) __attribute__((stdcall))")] IntPtr callback);
+        [DllImport("synthetic.dll")]
+        [return: NativeTypeName("int (*)(int) __attribute__((stdcall))")]
+        public static extern IntPtr GetCallback();
+    }
 }

@@ -8,6 +8,7 @@ namespace cppwin32
         std::set<std::string> reference;
 
         std::string output_folder;
+        std::string contract_file;
         bool base{};
         bool license{};
         bool brackets{};

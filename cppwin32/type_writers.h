@@ -82,6 +82,8 @@ namespace cppwin32
         bool abi_types{};
         bool full_namespace{};
         bool consume_types{};
+        std::string_view native_primitive_type;
+        bool uses_native_declarations = false;
         std::map<std::string_view, std::set<TypeDef, depends_compare>> depends;
         std::map<std::string_view, std::set<TypeDef, depends_compare>>* pdepends_In_WriteCppTypedef = nullptr;
         std::map<std::string_view, std::set<TypeRef, depends_compare>> extern_depends;
@@ -225,28 +227,28 @@ namespace cppwin32
 				write("bool");
 				break;
             case ConstantType::UInt8:
-                write("uint8_t");
+                write("unsigned char");
                 break;
             case ConstantType::Int8:
-                write("int8_t");
+                write("signed char");
                 break;
             case ConstantType::UInt16:
-                write("uint16_t");
+                write("unsigned short");
                 break;
             case ConstantType::Int16:
-                write("int16_t");
+                write("short");
                 break;
             case ConstantType::UInt32:
-                write("uint32_t");
+                write("unsigned int");
                 break;
             case ConstantType::Int32:
-                write("int32_t");
+                write("int");
                 break;
             case ConstantType::UInt64:
-                write("uint64_t");
+                write("unsigned long long");
                 break;
             case ConstantType::Int64:
-                write("int64_t");
+                write("long long");
                 break;
             case ConstantType::Float32:
                 write("float");
@@ -326,13 +328,13 @@ namespace cppwin32
             add_depends(type);
             if (is_nested(type))
             {
-                write(type.TypeDisplayName());
+                write(get_cpp_type_name(type));
             }
             else
             {
                 if (IsHiddenTypeNamespace(type))
                 {
-                    write("%", type.TypeDisplayName());
+                    write("%", get_cpp_type_name(type));
                 }
                 else
                 {
@@ -340,7 +342,7 @@ namespace cppwin32
 					{
 						write("win32::");
 					}
-					write("@::%", type.TypeNamespace(), type.TypeDisplayName());
+					write("@::%", type.TypeNamespace(), get_cpp_type_name(type));
                 }
             }
         }
@@ -400,7 +402,11 @@ namespace cppwin32
             call(signature.Type(),
                 [&](ElementType type)
                 {
-                    switch (type)
+                    if (!native_primitive_type.empty())
+                    {
+                        write(native_primitive_type);
+                    }
+                    else switch (type)
                     {
                     case ElementType::Boolean:
                         write("bool");
@@ -409,28 +415,28 @@ namespace cppwin32
                         write("WCHAR");
                         break;
                     case ElementType::I1:
-                        write("int8_t");
+                        write("signed char");
                         break;
                     case ElementType::U1:
-                        write("uint8_t");
+                        write("unsigned char");
                         break;
                     case ElementType::I2:
-                        write("int16_t");
+                        write("short");
                         break;
                     case ElementType::U2:
-                        write("uint16_t");
+                        write("unsigned short");
                         break;
                     case ElementType::I4:
-                        write("int32_t");
+                        write("int");
                         break;
                     case ElementType::U4:
-                        write("uint32_t");
+                        write("unsigned int");
                         break;
                     case ElementType::I8:
-                        write("int64_t");
+                        write("long long");
                         break;
                     case ElementType::U8:
-                        write("uint64_t");
+                        write("unsigned long long");
                         break;
                     case ElementType::R4:
                         write("float");
@@ -618,6 +624,12 @@ namespace cppwin32
                         {
                             array_suffix += write_temp("[%]", size);
                         }
+                    }
+                    if (type_name == "WCHAR")
+                    {
+                        write("    typedef wchar_t WCHAR;\n");
+                        pdepends_In_WriteCppTypedef = Last_pdepends_In_WriteCppTypedef;
+                        return;
                     }
                     auto str_typedef = is_interface_typedef(type, GetSupportedArchitectures(type))
                         ? write_temp("    typedef % %;\n", std::get<coded_index<TypeDefOrRef>>(field_type.Type()), type_name)

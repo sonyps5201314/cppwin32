@@ -2,6 +2,7 @@
 namespace PSDK {}
 #include "win32/base.h"
 #include "win32/impl/Windows.Win32.Devices.DeviceAndDriverInstallation.0.h"
+#include "win32/impl/Windows.Win32.Devices.Bluetooth.0.h"
 #include "win32/impl/Windows.Win32.System.Com.0.h"
 #include "win32/impl/Windows.Win32.Graphics.Direct2D.Common.0.h"
 #include "win32/impl/Windows.Win32.Graphics.Direct3D.0.h"
@@ -9,6 +10,11 @@ namespace PSDK {}
 #include "win32/impl/Windows.Win32.Graphics.DirectWrite.0.h"
 #include "win32/impl/Windows.Win32.Graphics.Direct3D.Dxc.0.h"
 #include "win32/impl/Windows.Win32.Data.Xml.XmlLite.0.h"
+#include "win32/impl/Windows.Win32.Networking.Ldap.0.h"
+#include "NativeLdapPrototypes.h"
+using ldap_sasl_callback = INT(__cdecl*)(LDAP*, PCSTR, PCSTR, LDAP_BERVAL const*, PLDAPControlA*, PLDAPControlA*, int*);
+static_assert(std::is_same_v<decltype(&LdapProjectionCheck::ldap_sasl_bindA), ldap_sasl_callback>);
+
 static_assert(std::is_same_v<ID3D10Blob, ID3DBlob>);
 static_assert(std::is_same_v<ID3D10Include, ID3DInclude>);
 static_assert(std::is_same_v<IDWriteGeometrySink, ID2D1SimplifiedGeometrySink>);
@@ -44,4 +50,28 @@ static_assert(std::is_same_v<PSP_INSTALLWIZARD_DATA, SP_INSTALLWIZARD_DATA*>);
 static_assert(std::is_same_v<PSP_ORIGINAL_FILE_INFO_A, SP_ORIGINAL_FILE_INFO_A*>);
 static_assert(std::is_same_v<PSP_ORIGINAL_FILE_INFO_W, SP_ORIGINAL_FILE_INFO_W*>);
 static_assert(std::is_same_v<PINFCONTEXT, INFCONTEXT*>);
+using bluetooth_callback = BOOL(__stdcall*)(LPVOID, BLUETOOTH_DEVICE_INFO const*);
+static_assert(std::is_same_v<PFN_DEVICE_CALLBACK, bluetooth_callback>);
+#ifndef BLUETOOTH_ADDRESS
+#error BLUETOOTH_ADDRESS must be a macro
+#endif
+#ifndef BLUETOOTH_LOCAL_SERVICE_INFO
+#error BLUETOOTH_LOCAL_SERVICE_INFO must be a macro
+#endif
+#ifndef BLUETOOTH_DEVICE_INFO
+#error BLUETOOTH_DEVICE_INFO must be a macro
+#endif
+static_assert(std::is_same_v<_BLUETOOTH_ADDRESS, BLUETOOTH_ADDRESS_STRUCT>);
+static_assert(std::is_same_v<_BLUETOOTH_LOCAL_SERVICE_INFO, BLUETOOTH_LOCAL_SERVICE_INFO_STRUCT>);
+static_assert(std::is_same_v<_BLUETOOTH_DEVICE_INFO, BLUETOOTH_DEVICE_INFO_STRUCT>);
+
+#include "NativeRecordLayouts.h"
+static_assert(sizeof(BLUETOOTH_ADDRESS_STRUCT) == 8);
+static_assert(sizeof(BLUETOOTH_DEVICE_INFO_STRUCT) == 560);
+static_assert(offsetof(BLUETOOTH_DEVICE_INFO_STRUCT, Address) == 8);
+static_assert(sizeof(BLUETOOTH_LOCAL_SERVICE_INFO_STRUCT) == 1040);
+static_assert(offsetof(BLUETOOTH_LOCAL_SERVICE_INFO_STRUCT, btAddr) == 8);
+
+#include "NativeCallbackInterfaces.h"
+
 int main() { return 0; }
