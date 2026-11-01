@@ -15,6 +15,12 @@ namespace PSDK {}
 #include "win32/Windows.Win32.Test.Bitfields.h"
 #include "win32/Windows.Win32.Test.Primitives.h"
 #include "win32/Windows.Win32.Test.NativeCallbacks.h"
+#include "win32/Windows.Win32.Test.NativeEdges.h"
+#include "win32/Windows.Win32.Test.UnicodeAliases.h"
+#include "win32/Windows.Win32.Test.CollidingRecords.h"
+#include "win32/Windows.Win32.Test.NameOwner.h"
+#include "win32/Windows.Win32.Test.ImportFirst.h"
+#include "win32/Windows.Win32.Test.ImportSecond.h"
 #include "win32/Windows.Win32.Test.Constants.h"
 #include "win32/Windows.Win32.Test.Platform.h"
 #include "win32/Windows.Win32.Test.InterfaceProjection.h"
@@ -78,6 +84,7 @@ static_assert(sizeof(FLOATOBJ_XFORM) == 24);
 #endif
 
 static_assert(std::is_same_v<PPACKET, PACKET*>);
+static_assert(std::is_same_v<ARCH_POINTER, PACKET*>);
 static_assert(std::is_same_v<MPACKET, PACKET*>);
 static_assert(std::is_same_v<PPPACKET, PACKET**>);
 #if defined(_M_IX86)
@@ -143,4 +150,66 @@ namespace native_callbacks = win32::Windows::Win32::Test::NativeCallbacks;
 static_assert(std::is_same_v<decltype(&native_callbacks::Register), void(__stdcall*)(native_callback)>);
 static_assert(std::is_same_v<decltype(&native_callbacks::GetCallback), native_callback(__stdcall*)()>);
 
+static_assert(sizeof(CollidingRecord) == 8);
+static_assert(std::is_same_v<SharedNativeName, CollidingRecord>);
+static_assert(std::is_enum_v<SharedNativeName_FLAGS>);
+static_assert(sizeof(CanonicalText) == 4);
+static_assert(sizeof(AlternateText) == 4);
+static_assert(!std::is_same_v<CanonicalText, AlternateText>);
+static_assert(std::is_same_v<_AlternateText, AlternateText>);
+static_assert(std::is_same_v<decltype(CanonicalReferenceHolder::Field), CanonicalText>);
+static_assert(sizeof(CanonicalReferenceHolder) == sizeof(CanonicalText));
+static_assert(std::is_same_v<KIND_MACRO, KindRecord>);
+static_assert(std::is_same_v<decltype(FlagHolder::Flags), KIND_FLAGS>);
+static_assert(std::is_same_v<decltype(FlagHolder::Mask), KIND_FLAGS>);
+static_assert(std::is_same_v<MethodRecord, _MethodRecord>);
+static_assert(std::is_same_v<decltype(ScalarBaseMember::Base), ScalarAlias>);
+static_assert(offsetof(ScalarBaseMember, Base) == 0);
+static_assert(offsetof(ScalarBaseMember, Tail) == 8);
+static_assert(std::is_base_of_v<BaseRecord, DerivedRecord>);
+static_assert(std::is_same_v<decltype(NestedOwner::Field), NestedOwner::_NestedTag>);
+static_assert(std::is_same_v<decltype(NestedAliasHolder::Field), NestedOwner::_NestedTag>);
+static_assert(std::is_same_v<EarlyCallbackAlias, void(__stdcall*)(ZCallbackArgument*)>);
+#if defined(_M_IX86)
+static_assert(static_cast<int>(ARCH_ENUM::Width) == 4);
+#else
+static_assert(static_cast<int>(ARCH_ENUM::Width) == 8);
+#endif
+namespace import_first = win32::Windows::Win32::Test::ImportFirst;
+namespace import_second = win32::Windows::Win32::Test::ImportSecond;
+static_assert(std::is_same_v<decltype(&import_first::LibraryProbe), unsigned int(__stdcall*)()>);
+static_assert(std::is_same_v<decltype(&import_second::user32_LibraryProbe), int(__stdcall*)(intptr_t)>);
+
+#if defined(UNICODE)
+static_assert(std::is_same_v<LEGACY, LEGACYW>);
+static_assert(std::is_same_v<PLEGACY, LEGACYW*>);
+static_assert(std::is_same_v<QLEGACY, LEGACYW*>);
+static_assert(std::is_same_v<PUNION, UNIONW*>);
+static_assert(std::is_same_v<CHOICE, CHOICE_W>);
+static_assert(std::is_same_v<PCHOICE, CHOICE_W*>);
+static_assert(std::is_same_v<CHOICE_TYPE, CHOICE_W>);
+static_assert(std::is_same_v<decltype(ChoiceHolder::Value), CHOICE_W>);
+#else
+static_assert(std::is_same_v<LEGACY, _LEGACY>);
+static_assert(std::is_same_v<PLEGACY, _LEGACY*>);
+static_assert(std::is_same_v<QLEGACY, _LEGACY*>);
+static_assert(std::is_same_v<PUNION, UNION*>);
+static_assert(std::is_same_v<CHOICE, CHOICE_A>);
+static_assert(std::is_same_v<PCHOICE, CHOICE_A*>);
+static_assert(std::is_same_v<CHOICE_TYPE, CHOICE_A>);
+static_assert(std::is_same_v<decltype(ChoiceHolder::Value), CHOICE_A>);
+#endif
+static_assert(std::is_same_v<decltype(LegacyHolder::Value), _LEGACY>);
+static_assert(std::is_same_v<decltype(LegacyHolder::Pointer), _LEGACY*>);
+static_assert(std::is_same_v<decltype(LegacyHolder::Alias), _LEGACY*>);
+static_assert(std::is_same_v<LegacyCallback, _LEGACY*(__stdcall*)(_LEGACY*, _LEGACY*)>);
+namespace legacy_api = win32::Windows::Win32::Test::UnicodeAliases;
+static_assert(std::is_same_v<decltype(&legacy_api::LegacyFirst), int(__stdcall*)(_LEGACY*)>);
+static_assert(std::is_same_v<decltype(&legacy_api::LegacyReturn), _LEGACY*(__stdcall*)(_LEGACY*)>);
+static_assert(std::is_same_v<decltype(&win32::Windows::Win32::Test::OtherLegacy::OtherLegacy), _LEGACY*(__stdcall*)(_LEGACY*)>);
+static_assert(std::is_same_v<decltype(&ILegacyConsumer::Get), _LEGACY*(__stdcall ILegacyConsumer::*)(_LEGACY*, _LEGACY*) noexcept>);
+static_assert(std::is_same_v<PALIAS, ZRECORD*>);
+#ifdef UNICODE
+static_assert(std::is_same_v<SELECTED_ALIAS, ZRECORD*>);
+#endif
 int main() { return 0; }

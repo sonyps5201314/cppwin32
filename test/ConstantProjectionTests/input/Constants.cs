@@ -7,6 +7,8 @@ namespace Windows.Win32.Foundation.Metadata
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)] public class NativeAliasAttribute : Attribute { public NativeAliasAttribute(string name, string declaration, string canonical) { } }
     public class NativeDeclaratorAttribute : Attribute { public NativeDeclaratorAttribute(string declaration, string dependencies) { } }
     public class NativePrimitiveTypeAttribute : Attribute { public NativePrimitiveTypeAttribute(string name) { } }
+    [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)] public class NativeConditionalAliasAttribute : Attribute { public NativeConditionalAliasAttribute(string condition, string kind, string name, string target, string owner) { } }
+    public class NativeScalarTypeAttribute : Attribute { public NativeScalarTypeAttribute(string ns, string name) { } }
     public class NativeTypeNameAttribute : Attribute
     {
         public NativeTypeNameAttribute(string value) { }
@@ -20,6 +22,8 @@ namespace Windows.Win32.Foundation.Metadata
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = true)] public class NativeBitfieldAttribute : Attribute { public NativeBitfieldAttribute(string name, long offset, long length) { } }
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = true)] public class NativeBitfieldTypeAttribute : Attribute { public NativeBitfieldTypeAttribute(string name, string typeNamespace, string typeName) { } }
     public class ConstAttribute : Attribute { }
+    public class AnsiAttribute : Attribute { }
+    public class UnicodeAttribute : Attribute { }
     public class IncompleteArrayAttribute : Attribute { }
     [Flags] public enum Architecture { X86 = 1, X64 = 2, Arm64 = 4, All = 7 }
     public class SupportedArchitectureAttribute : Attribute

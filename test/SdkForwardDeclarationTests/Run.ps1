@@ -58,7 +58,7 @@ if (-not $systemtimeAlias.Success) { throw 'SYSTEMTIME native typedef is missing
 $definitions.Add($systemtimeAlias.Value)
 foreach ($name in '_SYSTEMTIME', '_BLUETOOTH_ADDRESS', '_BLUETOOTH_LOCAL_SERVICE_INFO', '_BLUETOOTH_DEVICE_INFO')
 {
-    $match = [regex]::Match($structs, "(?m)^ *struct $name\s*\{")
+    $match = [regex]::Match($structs, "(?m)^ *(?:typedef )?struct $name\s*\{")
     if (-not $match.Success) { throw "缺少 $name 的实际导出结构体" }
     $position = $match.Index + $match.Length
     $depth = 1
@@ -68,7 +68,9 @@ foreach ($name in '_SYSTEMTIME', '_BLUETOOTH_ADDRESS', '_BLUETOOTH_LOCAL_SERVICE
         elseif ($structs[$position] -eq '}') { $depth-- }
         $position++
     }
-    if ($depth -ne 0 -or $structs[$position] -ne ';') { throw "$name 结构定义不完整" }
+    if ($depth -ne 0) { throw "$name 结构定义不完整" }
+    $position = $structs.IndexOf(';', $position)
+    if ($position -lt 0) { throw "$name 缺少声明结束符" }
     $definitions.Add($structs.Substring($match.Index, $position + 1 - $match.Index))
 }
 [IO.File]::WriteAllLines((Join-Path $output 'NativeRecordLayouts.h'), $definitions)

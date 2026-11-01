@@ -27,6 +27,6 @@
     </ClCompile>
     <Link><SubSystem>Console</SubSystem></Link>
   </ItemDefinitionGroup>
-  <ItemGroup><ClCompile Include="ConstantProjectionTests.cpp" /></ItemGroup>
+  <ItemGroup><ClCompile Include="ConstantProjectionTests.cpp" /><ClCompile Include="IncludeOrder.cpp" /></ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -1,0 +1,27 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32"><Configuration>Debug</Configuration><Platform>Win32</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals"><ProjectGuid>{B397C6FB-845D-498C-A0B8-100B6BD3A455}</ProjectGuid><WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration"><ConfigurationType>StaticLibrary</ConfigurationType><PlatformToolset>v142</PlatformToolset><UseDebugLibraries>true</UseDebugLibraries></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <OutDir>$(ProjectDir)obj\$(Platform)\</OutDir><IntDir>$(ProjectDir)obj\$(Platform)\intermediate\</IntDir>
+    <IncludePath></IncludePath><ExternalIncludePath></ExternalIncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard><WarningLevel>Level3</WarningLevel>
+      <IgnoreStandardIncludePath>true</IgnoreStandardIncludePath><ShowIncludes>true</ShowIncludes>
+      <AdditionalIncludeDirectories>$(ProjectionHeaders);$(VCToolsInstallDir)include;$(Cppwin32CrtHeaders)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="AllHeaders.cpp" Condition="'$(ConfigOnly)' != 'true'"><ForcedIncludeFiles>$(NativeContractsHeader)</ForcedIncludeFiles></ClCompile>
+    <ClCompile Include="VersionConstants.cpp" Condition="'$(ConfigOnly)' != 'true'" />
+    <ClCompile Include="Configuration.cpp"><PreprocessorDefinitions>$(ConfigurationProbe);%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

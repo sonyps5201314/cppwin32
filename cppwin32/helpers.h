@@ -388,6 +388,30 @@ namespace cppwin32
             || get_attribute(type, "Windows.Win32.Foundation.Metadata", "MetadataTypedefAttribute");
     }
 
+    TypeDef nested_typedef_target(TypeDef const& type)
+    {
+        if (!IsCppTypedef(type)) return {};
+        auto fields = type.FieldList();
+        if (size(fields) != 1) return {};
+        auto signature = fields.first.Signature();
+        if (signature.Type().ptr_count() || signature.Type().is_array()) return {};
+        auto index = std::get_if<coded_index<TypeDefOrRef>>(&signature.Type().Type());
+        if (!index) return {};
+        auto target = find(*index, GetSupportedArchitectures(type));
+        return target && is_nested(target) ? target : TypeDef{};
+    }
+
+    TypeDef record_typedef_target(TypeDef const& type)
+    {
+        if (!IsCppTypedef(type)) return {};
+        auto fields = type.FieldList();
+        if (size(fields) != 1) return {};
+        auto signature = fields.first.Signature();
+        if (signature.Type().ptr_count() || signature.Type().is_array()) return {};
+        auto index = std::get_if<coded_index<TypeDefOrRef>>(&signature.Type().Type());
+        return index ? find(*index, GetSupportedArchitectures(type)) : TypeDef{};
+    }
+
     struct native_record_origin
     {
         bool present = false;
@@ -420,10 +444,40 @@ namespace cppwin32
         return result;
     }
 
+    TypeDef native_record_reference_target(Field const& field, TypeDef const& target, Architecture arches);
+
+    struct conditional_native_alias
+    {
+        std::string condition, kind, name, target;
+        TypeDef owner;
+        std::string scope;
+    };
+    std::vector<conditional_native_alias> conditional_native_aliases;
+    std::map<std::pair<std::string_view, std::string>, std::vector<size_t>> conditional_alias_indices;
+    bool is_conditional_alias(TypeDef const& type);
+    std::vector<TypeDef> conditional_field_dependencies(Field const& field, Architecture arches);
+    conditional_native_alias const* find_conditional_alias(std::string_view ns, std::string_view name);
+    bool is_conditional_record_alias(TypeDef const& type, std::string_view name);
+    struct writer;
+    TypeDef typedef_record_owner(TypeDef const& type);
+    bool is_late_conditional_alias(std::string_view ns, std::string_view name);
+    void write_native_forward(writer& w, TypeDef const& type);
+    void write_native_alias(writer& w, std::string const& name);
+    void write_related_aliases(writer& w, TypeDef const& type, bool definition = false);
+    void write_owner_conditionals(writer& w, TypeDef const& type);
+
+
+    bool is_record_tag_typedef(TypeDef const& type)
+    {
+        auto target = record_typedef_target(type);
+        return target && get_native_record_origin(target).tag == type.TypeDisplayName();
+    }
+
     std::string_view get_cpp_type_name(TypeDef const& type)
     {
         auto const origin = get_native_record_origin(type);
         auto const managed = type.TypeDisplayName();
+        if (is_nested(type) && origin.present && origin.typedefs.empty()) return origin.tag;
         if (origin.present && !origin.typedefs.empty() && std::find(origin.typedefs.begin(), origin.typedefs.end(), managed) == origin.typedefs.end())
         {
             if (std::none_of(origin.macros.begin(), origin.macros.end(), [&](auto const& macro) { return macro.first == managed; }))

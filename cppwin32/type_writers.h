@@ -21,6 +21,28 @@ namespace cppwin32
         return result;
     }
 
+    std::set<std::pair<std::string_view, std::string_view>> scoped_native_types;
+    void check_native_name_conflicts(TypeDef const& type)
+    {
+        auto origin = get_native_record_origin(type);
+        if (!origin.present) return;
+        auto check = [&](std::string_view name, bool primary)
+        {
+            if (name.empty() || name == type.TypeDisplayName()) return;
+            for (auto const& entry : type.get_cache().namespaces())
+            {
+                auto found = entry.second.types.find(name);
+                if (found == entry.second.types.end() || found->second == type || record_typedef_target(found->second) == type) continue;
+                if (primary)
+                    scoped_native_types.emplace(type.TypeNamespace(), type.TypeDisplayName());
+            }
+        };
+        check(origin.tag, true);
+        auto primary = get_cpp_type_name(type);
+        for (auto name : origin.typedefs) check(name, name == primary);
+        for (auto const& macro : origin.macros) check(macro.first, false);
+    }
+
 	std::map<std::string_view, std::string_view> mapNamespaceHiddenType;
 	void CheckForHideTypeNamespace(TypeDef const& type, const std::string_view& ns)
 	{
@@ -41,11 +63,65 @@ namespace cppwin32
 		std::string_view type_name = type.TypeDisplayName();
 		auto v = mapNamespaceHiddenType.find(type_name);
 		bool result = v != mapNamespaceHiddenType.end() && v->second == type.TypeNamespace();
-		return result;
+		return result && scoped_native_types.count({type.TypeNamespace(), type_name}) == 0;
 #else
         return false;
 #endif
 	}
+
+    std::map<std::string_view, std::vector<TypeDef>> native_typedef_owners;
+
+    void initialize_native_typedef_owners(cache const& metadata)
+    {
+        for (auto const& entry : metadata.namespaces())
+            for (auto const& item : entry.second.types)
+                if (!is_conditional_alias(item.second)) native_typedef_owners[get_cpp_type_name(item.second)].push_back(item.second);
+    }
+
+    bool can_write_native_typedef(TypeDef const& type, std::string_view name)
+    {
+        if (is_conditional_record_alias(type, name)) return false;
+        if (is_nested(type) || name == get_cpp_type_name(type)) return true;
+        auto owners = native_typedef_owners.find(name);
+        if (owners == native_typedef_owners.end()) return true;
+        auto scope = IsHiddenTypeNamespace(type) ? std::string_view{} : type.TypeNamespace();
+        for (auto const& owner : owners->second)
+        {
+            auto owner_scope = IsHiddenTypeNamespace(owner) ? std::string_view{} : owner.TypeNamespace();
+            if (scope != owner_scope) continue;
+            if ((type.TypeNamespace() == owner.TypeNamespace() && type.TypeDisplayName() == owner.TypeDisplayName()) || record_typedef_target(owner) == type) continue;
+            return false;
+        }
+        return true;
+    }
+
+    TypeDef resolve_native_record_reference(TypeDef const& target, std::string_view name, Architecture arches)
+    {
+        if (!target || can_write_native_typedef(target, name)) return target;
+        auto owners = native_typedef_owners.find(name);
+        if (owners == native_typedef_owners.end()) return target;
+        auto scope = IsHiddenTypeNamespace(target) ? std::string_view{} : target.TypeNamespace();
+        for (auto const& owner : owners->second)
+        {
+            auto owner_scope = IsHiddenTypeNamespace(owner) ? std::string_view{} : owner.TypeNamespace();
+            if (scope != owner_scope) continue;
+            for (auto variant = owner; variant; variant = variant.next ? *variant.next : TypeDef{})
+            {
+                auto supported = GetSupportedArchitectures(variant);
+                if (arches == Architecture::None || supported == Architecture::None || (supported & arches)) return variant;
+            }
+        }
+        return target;
+    }
+
+    TypeDef native_record_reference_target(Field const& field, TypeDef const& target, Architecture arches)
+    {
+        auto attribute = get_attribute(field, "Windows.Win32.Foundation.Metadata", "NativeRecordReferenceAttribute");
+        if (!attribute) return target;
+        auto signature = attribute.Value();
+        auto name = std::get<std::string_view>(std::get<ElemSig>(signature.FixedArgs()[0].value).value);
+        return resolve_native_record_reference(target, name, arches);
+    }
 
     struct writer;
     struct finish_with
@@ -83,7 +159,16 @@ namespace cppwin32
         bool full_namespace{};
         bool consume_types{};
         std::string_view native_primitive_type;
-        bool uses_native_declarations = false;
+        std::set<std::string_view> native_namespace_dependencies;
+        std::set<TypeDef> forwarding;
+        std::set<std::pair<TypeDef, Architecture>> declared_metadata_types;
+        std::set<std::pair<std::string, Architecture>> native_aliases_written;
+        std::set<std::string> native_aliases_pending;
+        std::set<TypeDef> related_typedefs_pending;
+        std::set<std::pair<TypeDef, Architecture>> related_typedefs_written;
+        std::set<std::tuple<std::string_view, std::string, Architecture>> conditional_aliases_written;
+        std::vector<Architecture> architecture_stack;
+        Architecture current_architecture = Architecture::All;
         std::map<std::string_view, std::set<TypeDef, depends_compare>> depends;
         std::map<std::string_view, std::set<TypeDef, depends_compare>>* pdepends_In_WriteCppTypedef = nullptr;
         std::map<std::string_view, std::set<TypeRef, depends_compare>> extern_depends;
@@ -325,6 +410,20 @@ namespace cppwin32
 
         void write(TypeDef const& type)
         {
+            if (auto alias = find_conditional_alias(type.TypeNamespace(), type.TypeDisplayName()); alias && is_conditional_alias(type))
+            {
+                add_depends(alias->owner);
+                native_namespace_dependencies.insert(alias->owner.TypeNamespace());
+                if (!alias->scope.empty()) write("win32::@::", alias->scope);
+                write(alias->name);
+                return;
+            }
+            if (auto nested = nested_typedef_target(type))
+            {
+                write(nested.EnclosingType());
+                write("::%", get_cpp_type_name(nested));
+                return;
+            }
             add_depends(type);
             if (is_nested(type))
             {
@@ -572,6 +671,13 @@ namespace cppwin32
         static constexpr tagForceTypeDef ForceTypeDefs_Const[] = { {"PCSTR","const char*"},{"PCWSTR","const wchar_t*"} };
 		void WriteCppTypedef(TypeDef const& type)
 		{
+            if (is_conditional_alias(type) || nested_typedef_target(type) || is_record_tag_typedef(type)) return;
+            if (type.TypeDisplayName() == "va_list")
+            {
+                auto guard = wrap_type_namespace(*this, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+                write("    typedef ::va_list va_list;\n");
+                return;
+            }
 			int i = 0;
 
 			for (auto&& field : type.FieldList())
@@ -665,7 +771,8 @@ namespace cppwin32
                     {
 						auto guard = wrap_type_namespace(*this, type.TypeNamespace(), IsHiddenTypeNamespace(type));
 
-						write(str_typedef);
+                        write(str_typedef);
+                        if (current_architecture != Architecture::None) declared_metadata_types.emplace(type, current_architecture);
                     }
 				}
 
@@ -678,6 +785,8 @@ namespace cppwin32
 	{
 		if (arches != Architecture::None)
 		{
+            w.architecture_stack.push_back(w.current_architecture);
+            w.current_architecture = static_cast<Architecture>(w.current_architecture & arches);
 			bool has_least_one = false;
 			std::string str;
 			str = "#if ";
@@ -715,6 +824,8 @@ namespace cppwin32
 			auto format = R"(#endif
 )";
 			w.write(format);
+            w.current_architecture = w.architecture_stack.back();
+            w.architecture_stack.pop_back();
 		}
 	}
 }

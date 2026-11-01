@@ -94,7 +94,7 @@ namespace cppwin32
 )";
 
         w.write(format, mangled_name, mangled_name);
-        if (w.uses_native_declarations) w.write("#include \"win32/impl/native_declarations.h\"\n");
+
     }
 
     template<typename... Args>
@@ -158,21 +158,26 @@ namespace cppwin32
 
     void write_enum(writer& w, TypeDef const& type)
     {
-        auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+        auto arches = GetSupportedArchitectures(type);
+        check_for_write_defined_arches__part_head(w, arches);
+        {
+            auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
 
-        auto format = R"(    enum class % : %
+            auto format = R"(    enum class % : %
     {
 %    };
 )";
 
-        auto fields = type.FieldList();
-        w.write(format, type.TypeDisplayName(), fields.first.Signature().Type(), bind_each<write_enum_field>(fields));
+            auto fields = type.FieldList();
+            w.write(format, get_cpp_type_name(type), fields.first.Signature().Type(), bind_each<write_enum_field>(fields));
 
-		auto const attr = get_attribute(type, "System", "FlagsAttribute");
-        if (attr)
-        {
-            w.write("    DEFINE_ENUM_FLAG_OPERATORS(%)\n", type.TypeDisplayName());
+            auto const attr = get_attribute(type, "System", "FlagsAttribute");
+            if (attr)
+            {
+                w.write("    DEFINE_ENUM_FLAG_OPERATORS(%)\n", get_cpp_type_name(type));
+            }
         }
+        check_for_write_defined_arches__part_tail(w, arches);
     }
 
     void write_delegate(writer& w, TypeDef const& type);
@@ -187,19 +192,39 @@ namespace cppwin32
 
     void write_forward(writer& w, TypeDef const& type)
     {
+        if (w.declared_metadata_types.count({type, Architecture::All}) || w.declared_metadata_types.count({type, w.current_architecture})) return;
+        if (is_conditional_alias(type) || nested_typedef_target(type) || is_record_tag_typedef(type) || !w.forwarding.insert(type).second) return;
+        struct forwarding_scope
+        {
+            writer& output;
+            TypeDef type;
+            ~forwarding_scope() { output.forwarding.erase(type); }
+        } scope{ w, type };
         if (get_category(type) == category::enum_type)
         {
             auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
 
-            type_name type_name(type);
             auto format = R"(    enum class % : %;
 )";
-            w.write(format, type_name.name, type.FieldList().first.Signature().Type());
+            w.write(format, get_cpp_type_name(type), type.FieldList().first.Signature().Type());
             return;
         }
         else if (get_category(type) == category::delegate_type)
         {
+            method_signature signature{ get_delegate_method(type) };
+            auto forward = [&](TypeSig const& value)
+            {
+                auto index = std::get_if<coded_index<TypeDefOrRef>>(&value.Type());
+                if (!index) return;
+                auto definition = find(*index, GetSupportedArchitectures(type));
+                if (definition) write_forward(w, definition);
+            };
+            if (signature.return_signature()) forward(signature.return_signature().Type());
+            for (auto const& parameter : signature.params()) forward(parameter.second->Type());
+            auto arches = GetSupportedArchitectures(type);
+            check_for_write_defined_arches__part_head(w, arches);
             write_delegate(w, type);
+            check_for_write_defined_arches__part_tail(w, arches);
             return;
         }
 
@@ -232,14 +257,17 @@ namespace cppwin32
                 w.write(format, type_keyword, tag);
                 for (auto name : origin.typedefs)
                 {
-                    if (name != tag) w.write("    typedef % % %;\n", type_keyword, tag, name);
+                    if (name != tag && can_write_native_typedef(type, name))
+                    {
+                        w.write("    typedef % % %;\n", type_keyword, tag, name);
+                    }
                 }
                 if (origin.typedefs.empty() && type.TypeDisplayName() != tag &&
                     std::none_of(origin.macros.begin(), origin.macros.end(), [&](auto const& macro) { return macro.first == type.TypeDisplayName(); }))
                     w.write("    using % = %;\n", type.TypeDisplayName(), tag);
                 for (auto const& macro : origin.macros)
                 {
-                    w.write("#define % %\n", macro.first, macro.second);
+                    if (macro.first != origin.tag && !is_conditional_record_alias(type, macro.first)) w.write("#define % %\n", macro.first, macro.second);
                 }
             }
             
@@ -353,10 +381,12 @@ namespace cppwin32
 	{
 		auto const& signature = field.Signature();
 		auto const& field_type = signature.Type();
-		if (field_type.element_type() == ElementType::ValueType)
-		{
-			return true;
-		}
+        if (field_type.element_type() == ElementType::ValueType && field_type.ptr_count() == 0 && !field_type.is_array())
+        {
+            auto index = std::get_if<coded_index<TypeDefOrRef>>(&field_type.Type());
+            auto definition = index ? find(*index, GetSupportedArchitectures(field)) : TypeDef{};
+            return definition && get_category(definition) == category::struct_type && !IsCppTypedef(definition);
+        }
 		return false;
 	}
 	bool field_is_a_base_class(Field& field, std::string_view& name, int& last_base_class_index)
@@ -412,7 +442,7 @@ namespace cppwin32
                 if (end == std::string::npos) break;
                 begin = end + 1;
             }
-            w.uses_native_declarations = true;
+            add_native_dependencies(w, native_declaration_catalog::argument(value, 0));
             return native_declaration_catalog::argument(value, 0);
         }
 
@@ -429,7 +459,9 @@ namespace cppwin32
 
 		bool outputed = false;
         auto native_reference = get_attribute(row, "Windows.Win32.Foundation.Metadata", "NativeRecordReferenceAttribute");
-        if (native_reference)
+        auto native_index = std::get_if<coded_index<TypeDefOrRef>>(&row_signature.Type().Type());
+        auto native_definition = native_index ? find(*native_index, arches) : TypeDef{};
+        if (native_reference && !(native_definition && nested_typedef_target(native_definition)))
         {
             auto const reference_signature = native_reference.Value();
             auto const& arguments = reference_signature.FixedArgs();
@@ -437,7 +469,15 @@ namespace cppwin32
             if (auto index = std::get_if<coded_index<TypeDefOrRef>>(&row_signature.Type().Type()))
             {
                 auto definition = find(*index, arches);
-                if (definition && !IsHiddenTypeNamespace(definition))
+                if (definition)
+                {
+                    definition = resolve_native_record_reference(definition, name, arches);
+                    w.add_depends(definition);
+                }
+                auto conditional = definition ? find_conditional_alias(definition.TypeNamespace(), name) : nullptr;
+                if (conditional && !conditional->scope.empty())
+                    result += w.write_temp("win32::@::", conditional->scope);
+                else if (!conditional && definition && !is_nested(definition) && !IsHiddenTypeNamespace(definition))
                 {
                     if (w.full_namespace) result += "win32::";
                     result += w.write_temp("@::", definition.TypeNamespace());
@@ -446,7 +486,10 @@ namespace cppwin32
             result += w.write_temp("%", name);
             result.append(row_signature.Type().ptr_count(), '*');
             if (get_attribute(row, "Windows.Win32.Foundation.Metadata", "ConstAttribute")) result.insert(0, "const ");
-            w.write_temp("%", row_signature.Type());
+            {
+
+                w.write_temp("%", row_signature.Type());
+            }
             return result;
         }
 
@@ -525,6 +568,7 @@ namespace cppwin32
 
     void write_struct(writer& w, TypeDef const& type, Architecture arches, int nest_level = 0)
     {
+
         auto tname = get_cpp_type_name(type);
         auto const native_origin = get_native_record_origin(type);
         auto const declaration_name = !native_origin.present ? tname :
@@ -616,7 +660,7 @@ namespace cppwin32
 						write_struct(sw, nested_type, arches, nest_level + 1);
                         for (auto const& dependency : sw.depends)
                             for (auto const& definition : dependency.second) w.add_depends(definition);
-                        w.uses_native_declarations = w.uses_native_declarations || sw.uses_native_declarations;
+                        w.native_namespace_dependencies.insert(sw.native_namespace_dependencies.begin(), sw.native_namespace_dependencies.end());
                         type_string = sw.flush_to_string() + &type_string[ptr_pos];
 					}
                     if (starts_with(name, "Anonymous"))
@@ -672,16 +716,14 @@ namespace cppwin32
             std::vector<struct_field> fields;
         };
 
-        bool tag_is_macro = std::any_of(native_origin.macros.begin(), native_origin.macros.end(),
-            [&](auto const& macro) { return macro.first == native_origin.tag; });
-        if (tag_is_macro) w.write("#pragma push_macro(\"%\")\n#undef %\n", native_origin.tag, native_origin.tag);
 
         complex_struct s{ w, type, arches, nest_level };
-
+        auto class_layout = type.ClassLayout();
+        bool is_anonymous = is_anonymous_struct_or_union(tname, nullptr);
+        {
 		auto guard = wrap_type_namespace(w, type.TypeNamespace(), nest_level == 0 ? IsHiddenTypeNamespace(type) : true);
 
 		//https://learn.microsoft.com/en-us/cpp/preprocessor/pack?view=msvc-170
-		auto class_layout = type.ClassLayout();
 		if (class_layout)
 		{
 			uint16_t ps = class_layout.PackingSize();
@@ -705,7 +747,7 @@ namespace cppwin32
 			}
 		}
 
-		bool is_anonymous = is_anonymous_struct_or_union(tname, nullptr);
+
 
 		std::string_view const type_keyword = is_union(type) ? "union" : "struct";
 
@@ -727,9 +769,19 @@ namespace cppwin32
 			base_classes += " public " + field.type + "\n";
 		}
 
+        std::vector<std::string_view> definition_aliases;
+        if (!is_anonymous && !native_origin.tag.empty())
+            for (auto name : native_origin.typedefs)
+                if (can_write_native_typedef(type, name))
+                {
+                    definition_aliases.push_back(name);
+
+                }
+
+        auto definition_keyword = definition_aliases.empty() ? std::string(type_keyword) : "typedef " + std::string(type_keyword);
 		w.write(R"(%%% %
 %    %{
-)", bind<write_nesting>(is_anonymous ? 0 : nest_level + 1), alignOf, type_keyword, is_anonymous ? "" : declaration_name, base_classes, bind<write_nesting>(nest_level));
+)", bind<write_nesting>(is_anonymous ? 0 : nest_level + 1), alignOf, definition_keyword, is_anonymous ? "" : declaration_name, base_classes, bind<write_nesting>(nest_level));
 
         // Write nested types
         for (auto&& nested_type : type.get_cache().nested_types(type))
@@ -764,7 +816,20 @@ namespace cppwin32
             }
         }
 
-        w.write("    %}%", bind<write_nesting>(nest_level), is_anonymous ? "" : ";\n");
+        w.write("    %}", bind<write_nesting>(nest_level));
+        if (!is_anonymous)
+        {
+            if (!definition_aliases.empty())
+            {
+                w.write(" ");
+                for (size_t i = 0; i < definition_aliases.size(); ++i)
+                {
+                    if (i) w.write(", ");
+                    w.write(definition_aliases[i]);
+                }
+            }
+            w.write(";\n");
+        }
 
         if (!is_anonymous)
         {
@@ -774,8 +839,24 @@ namespace cppwin32
 			}
         }
 
-        if (tag_is_macro) w.write("#pragma pop_macro(\"%\")\n", native_origin.tag);
-
+        if (nest_level > 0 && !is_anonymous && native_origin.present && definition_aliases.empty())
+        {
+            for (auto name : native_origin.typedefs)
+                if (name != declaration_name) w.write("    typedef % % %;\n", type_keyword, declaration_name, name);
+            if (native_origin.typedefs.empty() && tname != declaration_name)
+                w.write("    using % = %;\n", tname, declaration_name);
+        }
+        }
+        if (w.current_architecture != Architecture::None) w.declared_metadata_types.emplace(type, w.current_architecture);
+        if (nest_level == 0)
+        {
+            write_related_aliases(w, type, true);
+            for (auto const& macro : native_origin.macros)
+                if (macro.first != native_origin.tag && !find_conditional_alias(type.TypeNamespace(), macro.first)) w.write("#define % %\n", macro.first, macro.second);
+        }
+        {
+        auto guard = wrap_type_namespace(w, type.TypeNamespace(), nest_level == 0 ? IsHiddenTypeNamespace(type) : true);
+        int last_base_class_index = 0;
 		const bool check_size = true;
 		const bool check_field_offset = true;
 		const bool assume_field_name_exists = true;
@@ -857,6 +938,7 @@ namespace cppwin32
 				}
 			}
 		}
+        }
     }
 
     struct dependency_sorter
@@ -898,7 +980,7 @@ namespace cppwin32
                 {
                     if (signature.Type().ptr_count() == 0 || is_nested(*field_type))
                     {
-                        auto field_type_def = find(*field_type, arches);
+                        auto field_type_def = native_record_reference_target(field, find(*field_type, arches), arches);
                         if (field_type_def && get_category(field_type_def) != category::enum_type)
                         {
                             it->second.add_edge(field_type_def);
@@ -1144,8 +1226,11 @@ namespace cppwin32
                 check_for_write_defined_arches__part_head(w, arches);
                 {
 					method_signature signature{ method };
+
 					auto declaration = w.write_temp("__stdcall WIN32_IMPL_%(%)", method.Name(), bind<write_abi_params>(signature));
-                    w.write("    % noexcept;\n", native_declaration(method_return_type(w, signature), declaration));
+                    auto result = native_declaration(method_return_type(w, signature), declaration);
+
+                    w.write("    % noexcept;\n", result);
                 }
                 check_for_write_defined_arches__part_tail(w, arches);
             }
@@ -1196,11 +1281,22 @@ namespace cppwin32
 
     void write_class_method(writer& w, method_signature const& method_signature)
     {
+
         auto const format = R"xyz(    % % %(%);
 )xyz";
         auto declaration = w.write_temp("% %(%)", method_calling_convention(method_signature.method()),
             method_signature.method().Name(), bind<write_method_params>(method_signature));
-        w.write("    %;\n", native_declaration(method_return_type(w, method_signature), declaration));
+        auto return_type = method_return_type(w, method_signature);
+        auto renamed = native_declarations.renamed_imports.find(method_signature.method());
+        if (renamed != native_declarations.renamed_imports.end())
+        {
+            auto const& import = native_declarations.import_names.at(method_signature.method());
+            auto const& first = native_declarations.import_names.at(native_declarations.first_imports.at(method_signature.method().Name()));
+            w.write("#pragma message(__FILE__ \": warning CPPWIN32001: %!% renamed to %; first declaration: %!%\")\n", import.first, import.second, renamed->second, first.first, first.second);
+            declaration = w.write_temp("% %(%)", method_calling_convention(method_signature.method()), renamed->second, bind<write_method_params>(method_signature));
+        }
+
+        w.write("    %;\n", native_declaration(return_type, declaration));
     }
 
     struct UdtConstTypeInfo
@@ -1214,6 +1310,11 @@ namespace cppwin32
 		}
     };
     std::map<UdtConstTypeInfo, std::vector<std::string>> mapEnumFromUdtConst;
+    bool is_configuration_constant(std::string_view value)
+    {
+        return starts_with(value, "NTDDI_") || starts_with(value, "_WIN32_WINNT_") || starts_with(value, "_WIN32_IE_") || starts_with(value, "WINAPI_FAMILY_") || value == "WINVER" || value == "WDK_NTDDI_VERSION" || value == "OSVERSION_MASK" || value == "SPVERSION_MASK" || value == "SUBVERSION_MASK";
+    }
+
     void write_class(writer& w, TypeDef const& type)
     {
 		w.write(R"(extern "C"
@@ -1244,6 +1345,7 @@ namespace cppwin32
             auto flags = field.Flags();
             if (flags.Literal())
             {
+                if (is_configuration_constant(field.Name())) continue;
                 auto const constant = field.Constant();
                 if (constant.Type() == ConstantType::String)
                 {
@@ -1378,6 +1480,7 @@ namespace cppwin32
 
     void write_delegate(writer& w, TypeDef const& type)
     {
+
         auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
 
         auto const format = R"xyz(    typedef % (% * %) (%);
@@ -1385,7 +1488,9 @@ namespace cppwin32
         method_signature method_signature{ get_delegate_method(type) };
 
         auto declaration = w.write_temp("(% * %) (%)", delegate_calling_convention(type), type.TypeDisplayName(), bind<write_delegate_params>(method_signature));
-        w.write("    typedef %;\n", native_declaration(method_return_type(w, method_signature), declaration));
+        auto result = native_declaration(method_return_type(w, method_signature), declaration);
+
+        w.write("    typedef %;\n", result);
     }
 
     void write_delegates(writer& w, std::vector<TypeDef> const& delegates)
@@ -1505,8 +1610,11 @@ namespace cppwin32
         for (auto&& method : type.MethodList())
         {
             method_signature signature{ method };
+
             auto declaration = w.write_temp("__stdcall %(%)", method.Name(), bind<write_abi_params>(signature));
-            w.write("        virtual % noexcept = 0;\n", native_declaration(method_return_type(w, signature), declaration));
+            auto result = native_declaration(method_return_type(w, signature), declaration);
+
+            w.write("        virtual % noexcept = 0;\n", result);
         }
 
         w.write(R"(    };

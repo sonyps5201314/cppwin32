@@ -8,7 +8,9 @@
 #include "type_dependency_graph.h"
 #include "type_writers.h"
 #include "native_declaration_writer.h"
+#include "conditional_alias_writer.h"
 #include "code_writers.h"
+#include "declaration_layout.h"
 #include "file_writers.h"
 #include <unordered_set>
 
@@ -173,6 +175,8 @@ Where <spec> is one or more of:
             }
 
             process_args(args);
+            for (auto name : {"native_declarations.h", "native_aliases.h"})
+                std::filesystem::remove(settings.output_folder + "win32/impl/" + name);
             cache c{ get_files_to_cache() };
             task_group group;
 
@@ -186,8 +190,29 @@ Where <spec> is one or more of:
                 }
             }
 
+            for (auto const& entry : c.namespaces())
+                for (auto const& item : entry.second.types) check_native_name_conflicts(item.second);
+
+            initialize_conditional_aliases(c);
+            initialize_native_typedef_owners(c);
             native_declarations.initialize(c);
-            native_declarations.write_header();
+            for (auto const& alias : conditional_native_aliases)
+            {
+                std::set<std::string> visited;
+                native_declarations.active = true;
+                native_declarations.require(alias.target, visited, true);
+            }
+            for (auto const& entry : conditional_alias_indices)
+            {
+                std::set<std::string> targets;
+                for (auto index : entry.second) targets.insert(conditional_native_aliases[index].target);
+                auto const& alias = conditional_native_aliases[entry.second.front()];
+                if (targets.size() != 1 || (!native_declarations.aliases.count(alias.name) && !native_declarations.known.count(alias.name))) continue;
+                std::set<std::string> visited;
+                native_declarations.require(alias.name, visited, true, true);
+            }
+            initialize_declaration_layout(c);
+            write_base_header(c);
             if (!settings.contract_file.empty()) write_native_contracts(c, settings.contract_file);
 
             for (auto&& [ns, members] : c.namespaces())
@@ -204,7 +229,6 @@ Where <spec> is one or more of:
             group.add([&c] { write_complex_structs_h(c); });
             group.add([&c] { write_complex_interfaces_h(c); });
 
-            std::filesystem::copy_file("base.h", settings.output_folder + "win32/" + "base.h", std::filesystem::copy_options::overwrite_existing);
         }
         catch (usage_exception const&)
         {

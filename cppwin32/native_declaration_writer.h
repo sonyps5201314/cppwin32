@@ -25,10 +25,13 @@ namespace cppwin32
         std::map<std::string, alias> aliases;
         std::map<std::string, TypeDef> known;
         std::map<std::string, std::string> required;
-        std::set<std::string> tags;
+        std::map<std::string, std::string> tags;
         std::set<TypeDef> forward_dependencies;
         bool active = false;
         std::map<MethodDef, uint16_t> imports;
+        std::map<MethodDef, std::pair<std::string_view, std::string_view>> import_names;
+        std::map<std::string_view, MethodDef> first_imports;
+        std::map<MethodDef, std::string> renamed_imports;
 
         static std::string argument(CustomAttributeSig const& signature, size_t index)
         {
@@ -47,6 +50,7 @@ namespace cppwin32
                     auto origin = get_native_record_origin(type);
                     if (!origin.tag.empty()) known.emplace(std::string(origin.tag), type);
                     for (auto name : origin.typedefs) known.emplace(std::string(name), type);
+                    for (auto const& macro : origin.macros) known.emplace(std::string(macro.first), type);
                 }
             std::set<std::string> needed;
             auto scan = [&](auto const& row)
@@ -68,16 +72,43 @@ namespace cppwin32
                 for (auto const& import : db->ImplMap)
                 {
                     auto forwarded = import.get_value<uint32_t>(1);
-                    if ((forwarded & 1) != 0) imports.emplace(db->MethodDef[(forwarded >> 1) - 1], import.get_value<uint16_t>(0));
+                    if ((forwarded & 1) != 0)
+                    {
+                        auto method = db->MethodDef[(forwarded >> 1) - 1];
+                        imports.emplace(method, import.get_value<uint16_t>(0));
+                        import_names.emplace(method, std::make_pair(db->ModuleRef[import.get_value<uint32_t>(3) - 1].Name(), import.ImportName()));
+                    }
                 }
                 for (auto const& field : db->Field) scan(field);
                 for (auto const& param : db->Param) scan(param);
             }
+            auto module_name = [](std::string_view name)
+            {
+                std::string result(name);
+                std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                return result;
+            };
+            for (auto const& entry : metadata.namespaces())
+                for (auto const& type : entry.second.classes)
+                    for (auto const& method : type.MethodList())
+                    {
+                        if (method.Flags().Access() != MemberAccess::Public) continue;
+                        auto import = import_names.find(method);
+                        if (import == import_names.end()) continue;
+                        auto first = first_imports.emplace(method.Name(), method);
+                        if (first.second) continue;
+                        auto const& previous = import_names.at(first.first->second);
+                        if (module_name(previous.first) == module_name(import->second.first) && previous.second == import->second.second) continue;
+                        auto prefix = std::filesystem::path(import->second.first).stem().string();
+                        for (auto& c : prefix) if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') c = '_';
+                        if (prefix.empty() || std::isdigit(static_cast<unsigned char>(prefix.front()))) prefix.insert(prefix.begin(), '_');
+                        renamed_imports.emplace(method, prefix + "_" + std::string(method.Name()));
+                    }
             std::set<std::string> visited;
             for (auto const& name : needed) require(name, visited);
         }
 
-        void require(std::string const& name, std::set<std::string>& visited, bool for_alias = false)
+        void require(std::string const& name, std::set<std::string>& visited, bool for_alias = false, bool original = false)
         {
             static std::set<std::string> const keywords = {
                 "void", "bool", "char", "short", "int", "long", "float", "double", "signed", "unsigned", "const", "volatile",
@@ -86,18 +117,26 @@ namespace cppwin32
                 "size_t", "intptr_t", "WCHAR", "GUID", "PCSTR", "PCWSTR", "noexcept"
             };
             if (keywords.count(name) || tags.count(name)) return;
+            if (!original && std::any_of(conditional_native_aliases.begin(), conditional_native_aliases.end(), [&](auto const& alias) { return alias.name == name; })) return;
             auto existing = known.find(name);
             if (existing != known.end())
             {
-                if (for_alias) forward_dependencies.insert(existing->second);
+                if (for_alias)
+                {
+                    auto const& namespaces = existing->second.get_cache().namespaces();
+                    auto entry = namespaces.find(existing->second.TypeNamespace());
+                    auto variants = entry->second.types_same_name.find(existing->second.TypeDisplayName());
+                    if (variants == entry->second.types_same_name.end()) forward_dependencies.insert(existing->second);
+                    else forward_dependencies.insert(variants->second.begin(), variants->second.end());
+                }
                 auto origin = get_native_record_origin(existing->second);
-                if (origin.present && origin.tag == name && !is_union(existing->second)) tags.insert(name);
+                if (origin.present && origin.tag == name) tags.emplace(name, is_union(existing->second) ? "union" : "struct");
                 return;
             }
             if (!visited.insert(name).second) return;
             auto found = aliases.find(name);
             if (found == aliases.end()) throw std::invalid_argument("Unresolved native declaration type: " + name);
-            auto declaration = found->second.canonical;
+            auto declaration = for_alias ? found->second.primary : found->second.canonical;
             auto primary = found->second.primary;
             bool platform_sized = false;
             for (auto const& dependency : native_identifiers(primary))
@@ -117,21 +156,11 @@ namespace cppwin32
             }
             if (platform_sized) declaration = primary;
             static std::regex const record(R"(\b(struct|class|union)\s+([A-Za-z_]\w*))");
-            for (std::sregex_iterator i(declaration.begin(), declaration.end(), record), end; i != end; ++i) tags.insert((*i)[2].str());
+            for (std::sregex_iterator i(declaration.begin(), declaration.end(), record), end; i != end; ++i) tags.emplace((*i)[2].str(), (*i)[1].str());
             for (auto const& dependency : native_identifiers(declaration)) require(dependency, visited, true);
-            required.emplace(name, declaration);
+            required.insert_or_assign(name, declaration);
         }
 
-        void write_header() const
-        {
-            if (!active) return;
-            writer output;
-            output.write("#pragma once\n#include \"win32/base.h\"\n");
-            for (auto const& name : tags) output.write("struct %;\n", name);
-            for (auto const& definition : forward_dependencies) write_forward(output, definition);
-            for (auto const& entry : required) output.write("typedef %;\n", native_declaration(entry.second, entry.first));
-            output.flush_to_file(settings.output_folder + "win32/impl/native_declarations.h");
-        }
     };
 
     inline std::string_view native_calling_convention(int convention)

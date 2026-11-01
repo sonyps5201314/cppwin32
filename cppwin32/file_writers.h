@@ -15,6 +15,14 @@ namespace cppwin32
             w.write("#pragma region forward_declarations\n");
             w.write_each<write_forward>(members.structs);
             w.write_each<write_forward>(members.interfaces);
+            for (auto const& type : members.structs)
+                if (get_native_record_origin(type).present)
+                {
+                    write_related_aliases(w, type);
+                    write_owner_conditionals(w, type);
+                }
+            if (auto found = namespace_native_aliases.find(ns); found != namespace_native_aliases.end())
+                for (auto const& alias : found->second) write_native_alias(w, alias);
             w.write("#pragma endregion forward_declarations\n\n");
 
             w.write("#pragma region delegates\n");
@@ -34,11 +42,15 @@ namespace cppwin32
 
         write_preamble(w);
         write_open_file_guard(w, ns, '0');
+        w.write("#include \"win32/base.h\"\n");
 
-        for (auto&& depends : w.depends)
+        for (auto const& entry : w.extern_depends)
         {
-            w.write_each<write_forward>(depends.second);
+            auto guard = wrap_type_namespace(w, entry.first);
+            w.write_each<write_extern_forward>(entry.second);
         }
+        write_dependency_forwards(w);
+        for (auto dependency : w.native_namespace_dependencies) if (dependency != ns) w.write_depends(dependency, '0');
 
         w.save_header('0');
     }
@@ -113,6 +125,22 @@ namespace cppwin32
             w.write("#pragma endregion methods\n\n");
         }
 
+        if (auto found = late_macro_consumers.find(ns); found != late_macro_consumers.end())
+            for (auto consumer : found->second)
+                if (consumer != ns) w.write_root_include(consumer);
+        std::vector<std::pair<std::string_view, std::string>> selections;
+        for (auto const& entry : conditional_alias_indices)
+            if (entry.first.first == ns && is_late_conditional_alias(ns, entry.first.second)) selections.push_back(entry.first);
+        write_conditional_groups(w, selections, false);
+        if (auto found = late_record_macros.find(ns); found != late_record_macros.end())
+            for (auto const& entry : found->second)
+            {
+                auto arches = GetSupportedArchitectures(entry.first);
+                check_for_write_defined_arches__part_head(w, arches);
+                w.write("#define % %\n", entry.second.first, entry.second.second);
+                check_for_write_defined_arches__part_tail(w, arches);
+            }
+
         write_close_file_guard(w);
         w.swap();
         write_preamble(w);
@@ -120,6 +148,7 @@ namespace cppwin32
         write_version_assert(w);
 
         w.write_depends(w.type_namespace, '2');
+        for (auto dependency : w.native_namespace_dependencies) if (dependency != ns) w.write_depends(dependency, '0');
         // Workaround for https://github.com/microsoft/cppwin32/issues/2
         for (auto&& extern_depends : w.extern_depends)
         {
@@ -176,7 +205,7 @@ namespace cppwin32
                     {
 						if (IsCppTypedef(type))
 						{
-							w.WriteCppTypedef(type);
+                            if (!typedef_record_owner(type)) w.WriteCppTypedef(type);
 						}
 						else
 						{
@@ -184,6 +213,10 @@ namespace cppwin32
 						}
                     }
                     check_for_write_defined_arches__part_tail(w, arches);
+                    if (!IsCppTypedef(type))
+                    {
+                        write_owner_conditionals(w, type);
+                    }
                 }
             });
 
@@ -192,6 +225,7 @@ namespace cppwin32
 
         write_preamble(w);
         write_open_file_guard(w, "complex_structs");
+        for (auto dependency : w.native_namespace_dependencies) w.write_depends(dependency, '0');
 
         for (auto&& depends : w.depends)
         {
@@ -227,6 +261,7 @@ namespace cppwin32
 
         write_preamble(w);
         write_open_file_guard(w, "complex_interfaces");
+        for (auto dependency : w.native_namespace_dependencies) w.write_depends(dependency, '0');
 
         for (auto&& depends : w.depends)
         {
@@ -244,6 +279,18 @@ namespace cppwin32
 
     static void write_native_contracts(cache const& metadata, std::string const& path)
     {
+        writer ownership;
+        auto record_alias = [&](auto const& key, std::string_view alias, std::string_view kind)
+        {
+            auto owner = metadata.find_required(key.first, key.second);
+            auto origin = get_native_record_origin(owner);
+            ownership.write("%\t%\t%\t%\t%\n", kind, key.first, key.second, origin.tag.empty() ? get_cpp_type_name(owner) : origin.tag, alias);
+        };
+        for (auto const& entry : related_typedefs)
+            for (auto const& alias : entry.second) record_alias(entry.first, get_cpp_type_name(alias), "metadata");
+        for (auto const& entry : related_native_aliases)
+            for (auto const& alias : entry.second) record_alias(entry.first, alias, "native");
+        ownership.flush_to_file(path + ".aliases.tsv");
         writer output;
         size_t count = 0;
         auto add = [&](auto const& row, Architecture architecture)
@@ -288,8 +335,30 @@ namespace cppwin32
                     for (auto const& parameter : method.ParamList()) add(parameter, method_architecture);
                 }
             }
+        for (auto const& alias : conditional_native_aliases)
+        {
+            output.write("#if %\n", alias.condition);
+            auto scope = alias.scope;
+            if (scope.empty() && alias.kind == "macro" && !IsHiddenTypeNamespace(alias.owner)) scope = std::string(alias.owner.TypeNamespace());
+            {
+                auto guard = wrap_type_namespace(output, scope, scope.empty());
+                output.write("using ConditionalAliasContract_% = %;\n", static_cast<uint32_t>(count++), alias.name);
+            }
+            output.write("#endif\n");
+        }
+        for (auto const& entry : conditional_alias_indices)
+        {
+            auto const& alias = conditional_native_aliases[entry.second.front()];
+            std::set<std::string> targets;
+            for (auto index : entry.second) targets.insert(conditional_native_aliases[index].target);
+            if (targets.size() != 1 || !native_declarations.aliases.count(alias.name)) continue;
+            output.write("#if !(%)\n", alias.condition);
+            output.write("using OriginalAliasContract_% = %;\n", static_cast<uint32_t>(count++), alias.name);
+            output.write("#endif\n");
+        }
         output.swap();
-        output.write("#pragma once\nnamespace PSDK {}\n#include \"win32/base.h\"\n#include \"win32/impl/native_declarations.h\"\n");
+        output.write("#pragma once\nnamespace PSDK {}\n#include \"win32/base.h\"\n");
+        for (auto const& entry : metadata.namespaces()) output.write_root_include(entry.first);
         writer closure;
         closure.depends = output.depends;
         std::set<TypeDef> emitted;

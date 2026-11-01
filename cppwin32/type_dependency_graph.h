@@ -72,12 +72,17 @@ namespace cppwin32
 			}
             for (auto&& field : type.FieldList())
             {
+                for (auto const& dependency : conditional_field_dependencies(field, arches))
+                {
+                    it->second.add_edge(dependency);
+                    add_struct(dependency);
+                }
                 auto const& signature = field.Signature();
                 if (auto const field_type = std::get_if<coded_index<TypeDefOrRef>>(&signature.Type().Type()))
                 {
                     if (signature.Type().ptr_count() == 0 || is_nested(*field_type))
                     {
-						auto field_type_def = find(*field_type, arches);
+						auto field_type_def = native_record_reference_target(field, find(*field_type, arches), arches);
 						if (field_type_def && get_category(field_type_def) == category::struct_type)
 						{
 							auto pType = &field_type_def;

@@ -172,6 +172,8 @@
     </ClInclude>
     <ClInclude Include="cmd_reader.h" />
     <ClInclude Include="code_writers.h" />
+    <ClInclude Include="conditional_alias_writer.h" />
+    <ClInclude Include="declaration_layout.h" />
     <ClInclude Include="file_writers.h" />
     <ClInclude Include="helpers.h" />
     <ClInclude Include="resource.h" />

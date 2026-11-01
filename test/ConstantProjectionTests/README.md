@@ -35,3 +35,32 @@
 基础整数使用 C++ 关键字，SDK 的真实 typedef 继续保留。NativePrimitiveType 单独恢复 long 等原始拼写；x64/x86 检查函数、委托、字段、const 指针、普通宏常量，以及 void 返回值带属性时的参数位置。
 
 复杂声明还检查内联 cdecl/stdcall 回调、嵌套回调、数组指针及返回函数指针的函数，结合真实类型断言验证 x64/x86。命名回调读取实际 UnmanagedFunctionPointer，导出函数读取 ImplMap 调用约定。
+
+声明冲突还检查原生别名与其他分区类型重名、宏与合成枚举重名、结构体标签的多余 typedef、嵌套标签和嵌套类型别名、回调参数的声明顺序，以及名为 Base 的整数成员和真正的结构体基类。备用别名冲突不会将唯一结构体整体移入命名空间；有独立主类型的同名备用别名不重复输出，字段声明和结构依赖排序均使用最终输出名称对应的类型。跨架构指针 typedef 验证前置声明不会因其他架构的生成路径而遗漏。
+
+人为定义的枚举在 enums.json 中正式使用有意义的名称，例如 SEC_WINNT_AUTH_IDENTITY_FLAGS、SERVICE_NOTIFY_FLAGS；C++ 保留其枚举类型及全部值，不临时添加 _ENUM，也不将枚举使用位置降回整数。命名原生结构的完整定义使用 `typedef struct tag { ... } name;`，在定义所在文件保留真实 typedef；前置声明头继续提供依赖所需的提前声明。
+
+条件类型别名通过 NativeConditionalAlias 保留 SDK 条件、宏或 typedef 类别，以及两支目标。使用 `-CharacterSet Ansi`、`-CharacterSet Unicode` 分别验证 x64/x86：包括双分支宏、条件 typedef、指针别名、仅在 UNICODE 下选择 W 的单分支宏，以及按值字段对两个目标完整定义的依赖。配置常量、默认版本及分区支持由生成的 base.h 提供，投影头不包含 sdkddkver.h、winapifamily.h。
+
+单分支宏还验证：真实 ANSI typedef 在函数参数和返回值、回调、接口、按值字段、指针字段和 typedef 定义中保留原名，同时保持原来的 ANSI 类型。相关原始声明完成后再定义选择宏，UNICODE 使用方仍选择 W。没有独立 WinMD 类型的指针 typedef 从真实 NativeAlias 来源补齐；union 前置声明保留 union 类别。真实 SDK 检查包含四个 ToolHelp API 以及 PMODULEENTRY32、PPROCESSENTRY32 在两个字符集中的可用性。
+
+输出按记录归属组织：完整定义旁保留记录和指针别名；条件类型关系就近分组；遮蔽原有类型或标签的宏放到公开分区声明末尾。测试要求不存在 native_declarations.h、native_aliases.h，也不通过 push_macro/pop_macro 修补自身顺序。IncludeOrder.cpp 反向包含消费者和提供者，imports/SdkConfiguration.cpp 提前包含真实 SDK 配置头。宏冲突负例继续检查 C4005，真实类型宏不套 #ifndef。
+
+imports/SdkConfiguration.cpp 只验证与外部 SDK 配置头兼容。生成结果的独立性另由 test/NoSdkHeaders/Run.ps1 屏蔽 SDK 平台头目录验证，并由 test/AuditSdkIndependence.py 检查全部 include 及唯一默认版本定义。
+
+导出时增加 `-contracts <文件路径>` 会生成复杂原生声明、所有条件别名和单分支原名的编译检查，并生成同名 .aliases.tsv 归属清单。将检查头通过本脚本 `-NativeContracts <文件路径>` 传入，可在 x64/x86 符号工程中同时编译。test/AuditDeclarationLayout.py 将归属清单与实际完整定义旁的别名核对，并检查旧辅助头、旧 include 及宏保护序列是否归零。默认发射器为已构建的 Release/net10.0/ClangSharpSourceToWinmd.exe；可用 `-Emitter` 指定其他路径。
+
+`test/CompareDeclarations.py` 全量比较 API、回调、接口、字段、typedef、枚举成员和常量的声明原文。`--baseline 批次名=win32目录` 可重复指定多个批次，输出包含逐项差异、文件位置和 SHA256；不以 ABI 等价忽略类型拼写。`--review 批次名=精确变化清单` 会对照已审核的旧值和新值，发现任何额外变化立即失败。该脚本针对生成器的单行声明，完整头文件 diff 和原生编译仍需保留。
+
+已审核的条件宏改动前基准是 `Z:\sdk-declarations-20261102\headers\win32`，可执行以下检查。清单中包含条件别名补充、用户确认的 FLAGS 枚举投影和先前 RPC 版本标记；不能随新输出自动重写清单。
+
+```powershell
+python test/CompareDeclarations.py --current Z:\TYPEDEF\win32 `
+  --baseline preunicode=Z:\sdk-declarations-20261102\headers\win32 `
+  --review preunicode=test/sdk-spelling-preunicode-review.json.gz `
+  --output Z:\sdk-spelling-check
+```
+
+`imports/ImportCollisions.sln` 使用 `devenv.com` 构建独立元数据，保留两个 DLL 中同名方法的导入记录。首次出现的声明保留原名，其他 DLL 的同名声明加上 DLL 文件名主干和下划线，并产生 `CPPWIN32001` 编译警告。输出保持 `extern "C"` 和原调用约定。
+
+`imports/ImportSymbols.sln` 将声明地址编译到静态库对象中，使用 `dumpbin /symbols` 核对 x64 的普通 C 名称及 x86 的 stdcall 名称，排除 C++ 函数修饰名。测试不链接或调用更名后的 DLL 函数。可使用 `-SdkHeaders Z:\ms` 同时检查真实 SDK 的 `GetDeviceID`、`tbs_GetDeviceID` 和全局 `_LSA_UNICODE_STRING`；完整 SDK 的工程检查另见 `test/SampleD3DApp/Run.ps1`。
