@@ -1,1 +1,3 @@
 ﻿SLIST_ENTRY
+GetWindowRect
+GetDesktopWindow
