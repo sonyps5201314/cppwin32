@@ -17,9 +17,11 @@
 #include <gdiplus.h>
 #include <ClusApi.h>
 #include <winhttp.h>
+#include <gl/GL.h>
 
 int main()
 {
+    GLvoid* x212;
     SLIST_ENTRY cb;
     int s = sizeof(cb);
     printf("Hello World!\n");
