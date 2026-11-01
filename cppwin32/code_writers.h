@@ -724,7 +724,7 @@ namespace cppwin32
 				base_classes += "    ";
 			}
 			base_classes += is_empty ? ':' : ',';
-			base_classes += " public " + field.type + "\r\n";
+			base_classes += " public " + field.type + "\n";
 		}
 
 		w.write(R"(%%% %
