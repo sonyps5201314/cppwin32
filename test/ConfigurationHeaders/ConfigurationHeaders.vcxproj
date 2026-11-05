@@ -15,7 +15,7 @@
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard><WarningLevel>Level3</WarningLevel>
       <IgnoreStandardIncludePath>true</IgnoreStandardIncludePath><ShowIncludes>true</ShowIncludes>
-      <AdditionalIncludeDirectories>$(ProjectionHeaders);$(VCToolsInstallDir)include;$(Cppwin32CrtHeaders)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectionHeaders);$(VCToolsInstallDir)include;$(Cppwin32CrtHeaders);$(Cppwin32SdkConfigurationHeaders)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

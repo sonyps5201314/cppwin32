@@ -212,7 +212,7 @@ Where <spec> is one or more of:
                 native_declarations.require(alias.name, visited, true, true);
             }
             initialize_declaration_layout(c);
-            write_base_header(c);
+            std::filesystem::copy_file("base.h", settings.output_folder + "win32/base.h", std::filesystem::copy_options::overwrite_existing);
             if (!settings.contract_file.empty()) write_native_contracts(c, settings.contract_file);
 
             for (auto&& [ns, members] : c.namespaces())

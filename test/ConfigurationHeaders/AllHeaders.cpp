@@ -5,8 +5,8 @@ namespace PSDK {}
 #include <win32/Windows.Win32.System.SystemInformation.h>
 #include <win32/Windows.Win32.Devices.Bluetooth.h>
 #include <win32/Windows.Win32.Networking.Ldap.h>
-#if defined(_INC_SDKDDKVER) || defined(_INC_WINAPIFAMILY) || defined(_INC_WINPACKAGEFAMILY)
-#error Windows_SDK_platform_header_was_included
+#if !defined(_INC_SDKDDKVER) || !defined(_INC_WINAPIFAMILY) || !defined(_INC_WINPACKAGEFAMILY)
+#error Required_SDK_configuration_header_was_not_included
 #endif
 
 namespace toolhelp = win32::Windows::Win32::System::Diagnostics::ToolHelp;

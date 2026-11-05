@@ -56,7 +56,7 @@ constexpr unsigned partitions =
     (WINAPI_PARTITION_PKG_WINMGMT ? 0x080 : 0) |
     (WINAPI_PARTITION_PKG_PERFCOUNTER ? 0x100 : 0);
 #ifdef CPPWIN32_PROBE_PARTITION
-static_assert(partitions == 0x0C6);
+static_assert(partitions == 0x046);
 #elif WINAPI_FAMILY == 100
 static_assert(partitions == 0x047);
 #elif WINAPI_FAMILY == 2

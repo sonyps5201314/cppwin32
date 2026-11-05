@@ -318,36 +318,6 @@ namespace cppwin32
                     w.write("#ifndef %\n    inline constexpr % % = %;\n#endif\n", field.Name(), field.Constant().Type(), field.Name(), field.Constant());
     }
 
-    void write_base_header(cache const& metadata)
-    {
-        auto source = file_to_string("base.h");
-        std::string_view marker = "#pragma region configuration\n";
-        auto position = source.find(marker);
-        if (position == std::string::npos) throw std::invalid_argument("Missing base configuration insertion point");
-        position += marker.size();
-        writer output;
-        output.write(source.substr(0, position));
-        for (auto const& entry : metadata.namespaces())
-        {
-            bool configured = std::any_of(entry.second.classes.begin(), entry.second.classes.end(), [](auto const& type)
-            {
-                for (auto const& field : type.FieldList()) if (field.Flags().Literal() && is_configuration_constant(field.Name())) return true;
-                return false;
-            });
-            if (!configured) continue;
-            output.type_namespace = entry.first;
-            write_configuration_constants(output, entry.second);
-        }
-        std::map<std::string_view, Constant> constants;
-        for (auto const& entry : metadata.namespaces())
-            for (auto const& type : entry.second.classes)
-                for (auto const& field : type.FieldList())
-                    if (field.Flags().Literal() && is_configuration_constant(field.Name()) && field.Name() != "WINVER" && field.Name() != "NTDDI_VERSION" && !ends_with(field.Name(), "_MAXVER")) constants.emplace(field.Name(), field.Constant());
-        for (auto const& entry : constants) output.write("#ifndef %\n#define % %\n#endif\n", entry.first, entry.first, entry.second);
-        output.write(source.substr(position));
-        output.flush_to_file(settings.output_folder + "win32/base.h");
-    }
-
     void write_dependency_forwards(writer& w)
     {
         std::set<TypeDef> written;

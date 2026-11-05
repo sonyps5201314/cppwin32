@@ -43,6 +43,7 @@ namespace cppwin32
         write_preamble(w);
         write_open_file_guard(w, ns, '0');
         w.write("#include \"win32/base.h\"\n");
+        write_configuration_constants(w, members);
 
         for (auto const& entry : w.extern_depends)
         {
