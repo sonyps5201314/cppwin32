@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <DeepAuditOutput Condition="'$(DeepAuditOutput)' == ''">Z:\sdk-deep-audit-20261105</DeepAuditOutput>
+    <DeepAuditFlavor Condition="'$(DeepAuditFlavor)' == ''">Extractor</DeepAuditFlavor>
+    <BaseIntermediateOutputPath>$(DeepAuditOutput)\build\$(DeepAuditFlavor)\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>
