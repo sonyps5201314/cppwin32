@@ -192,7 +192,9 @@ namespace cppwin32
 
     void write_forward(writer& w, TypeDef const& type)
     {
-        if (w.declared_metadata_types.count({type, Architecture::All}) || w.declared_metadata_types.count({type, w.current_architecture})) return;
+        auto supported = GetSupportedArchitectures(type);
+        auto effective = supported == Architecture::None ? w.current_architecture : static_cast<Architecture>(w.current_architecture & supported);
+        if (effective == Architecture::None || w.metadata_type_written(w.declared_metadata_types, type, effective) || w.metadata_type_written(w.forwarded_metadata_types, type, effective)) return;
         if (is_conditional_alias(type) || nested_typedef_target(type) || is_record_tag_typedef(type) || !w.forwarding.insert(type).second) return;
         struct forwarding_scope
         {
@@ -207,6 +209,7 @@ namespace cppwin32
             auto format = R"(    enum class % : %;
 )";
             w.write(format, get_cpp_type_name(type), type.FieldList().first.Signature().Type());
+            w.forwarded_metadata_types.emplace(type, effective);
             return;
         }
         else if (get_category(type) == category::delegate_type)
@@ -225,6 +228,7 @@ namespace cppwin32
             check_for_write_defined_arches__part_head(w, arches);
             write_delegate(w, type);
             check_for_write_defined_arches__part_tail(w, arches);
+            w.forwarded_metadata_types.emplace(type, effective);
             return;
         }
 
@@ -273,6 +277,7 @@ namespace cppwin32
             
             check_for_write_defined_arches__part_tail(w, arches);
         }
+        w.forwarded_metadata_types.emplace(type, effective);
     }
 
     struct struct_field
@@ -1480,6 +1485,7 @@ namespace cppwin32
 
     void write_delegate(writer& w, TypeDef const& type)
     {
+        if (w.metadata_type_written(w.declared_metadata_types, type, w.current_architecture)) return;
 
         auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
 
@@ -1491,6 +1497,7 @@ namespace cppwin32
         auto result = native_declaration(method_return_type(w, method_signature), declaration);
 
         w.write("    typedef %;\n", result);
+        if (w.current_architecture != Architecture::None) w.declared_metadata_types.emplace(type, w.current_architecture);
     }
 
     void write_delegates(writer& w, std::vector<TypeDef> const& delegates)

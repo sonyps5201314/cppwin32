@@ -208,7 +208,7 @@ namespace cppwin32
                 if (!w.related_typedefs_pending.insert(alias).second) continue;
                 auto arches = GetSupportedArchitectures(alias);
                 check_for_write_defined_arches__part_head(w, arches);
-                w.WriteCppTypedef(alias);
+                w.WriteCppTypedef(alias, definition);
                 check_for_write_defined_arches__part_tail(w, arches);
                 w.related_typedefs_pending.erase(alias);
                 if (w.current_architecture != Architecture::None) w.related_typedefs_written.emplace(alias, w.current_architecture);

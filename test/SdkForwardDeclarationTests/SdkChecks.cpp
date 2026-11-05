@@ -11,6 +11,9 @@ namespace PSDK {}
 #include "win32/impl/Windows.Win32.Graphics.Direct3D.Dxc.0.h"
 #include "win32/impl/Windows.Win32.Data.Xml.XmlLite.0.h"
 #include "win32/impl/Windows.Win32.Networking.Ldap.0.h"
+#include "win32/impl/Windows.Win32.System.Threading.0.h"
+static_assert(std::is_same_v<PEB, _PEB>);
+static_assert(std::is_same_v<PPEB, PEB*>);
 #include "NativeLdapPrototypes.h"
 using ldap_sasl_callback = INT(__cdecl*)(LDAP*, PCSTR, PCSTR, LDAP_BERVAL const*, PLDAPControlA*, PLDAPControlA*, int*);
 static_assert(std::is_same_v<decltype(&LdapProjectionCheck::ldap_sasl_bindA), ldap_sasl_callback>);

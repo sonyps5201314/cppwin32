@@ -161,6 +161,7 @@ namespace cppwin32
         std::string_view native_primitive_type;
         std::set<std::string_view> native_namespace_dependencies;
         std::set<TypeDef> forwarding;
+        std::set<std::pair<TypeDef, Architecture>> forwarded_metadata_types;
         std::set<std::pair<TypeDef, Architecture>> declared_metadata_types;
         std::set<std::pair<std::string, Architecture>> native_aliases_written;
         std::set<std::string> native_aliases_pending;
@@ -172,6 +173,14 @@ namespace cppwin32
         std::map<std::string_view, std::set<TypeDef, depends_compare>> depends;
         std::map<std::string_view, std::set<TypeDef, depends_compare>>* pdepends_In_WriteCppTypedef = nullptr;
         std::map<std::string_view, std::set<TypeRef, depends_compare>> extern_depends;
+
+        bool metadata_type_written(std::set<std::pair<TypeDef, Architecture>> const& declarations, TypeDef const& type, Architecture arches) const
+        {
+            auto written = Architecture::None;
+            for (auto entry = declarations.lower_bound({type, Architecture::None}); entry != declarations.end() && entry->first == type; ++entry)
+                written = static_cast<Architecture>(written | entry->second);
+            return arches != Architecture::None && (written & arches) == arches;
+        }
 
         template<typename T>
         struct member_value_guard
@@ -669,13 +678,15 @@ namespace cppwin32
 		};
 		static constexpr tagForceTypeDef ForceTypeDefs[] = { {"PSTR","char*"},{"PWSTR","wchar_t*"} };
         static constexpr tagForceTypeDef ForceTypeDefs_Const[] = { {"PCSTR","const char*"},{"PCWSTR","const wchar_t*"} };
-		void WriteCppTypedef(TypeDef const& type)
+		void WriteCppTypedef(TypeDef const& type, bool definition = false)
 		{
             if (is_conditional_alias(type) || nested_typedef_target(type) || is_record_tag_typedef(type)) return;
+            if (!definition && metadata_type_written(declared_metadata_types, type, current_architecture)) return;
             if (type.TypeDisplayName() == "va_list")
             {
                 auto guard = wrap_type_namespace(*this, type.TypeNamespace(), IsHiddenTypeNamespace(type));
                 write("    typedef ::va_list va_list;\n");
+                if (current_architecture != Architecture::None) declared_metadata_types.emplace(type, current_architecture);
                 return;
             }
 			int i = 0;
@@ -734,6 +745,7 @@ namespace cppwin32
                     if (type_name == "WCHAR")
                     {
                         write("    typedef wchar_t WCHAR;\n");
+                        if (current_architecture != Architecture::None) declared_metadata_types.emplace(type, current_architecture);
                         pdepends_In_WriteCppTypedef = Last_pdepends_In_WriteCppTypedef;
                         return;
                     }
@@ -778,6 +790,7 @@ namespace cppwin32
 
 				i++;
 			}
+            if (current_architecture != Architecture::None) declared_metadata_types.emplace(type, current_architecture);
 		}
     };
 

@@ -21,6 +21,8 @@ foreach ($name in 'BLUETOOTH_ADDRESS', 'BLUETOOTH_LOCAL_SERVICE_INFO', 'BLUETOOT
 
 $output = Join-Path $PSScriptRoot 'obj'
 New-Item -ItemType Directory -Path $output -Force | Out-Null
+& python (Join-Path $PSScriptRoot '..\AuditForwardDeclarations.py') --headers (Join-Path $headersRoot 'win32') --output (Join-Path $output 'forward-declarations.json')
+if ($LASTEXITCODE -ne 0) { throw '存在同一条件和有效架构内的重复前置声明或 typedef' }
 $structs = [IO.File]::ReadAllText((Join-Path $headersRoot 'win32\impl\complex_structs.h'))
 $ldap = [IO.File]::ReadAllText((Join-Path $headersRoot 'win32\Windows.Win32.Networking.Ldap.h'))
 $ldapDeclarations = [Collections.Generic.List[string]]::new()
@@ -53,9 +55,6 @@ foreach ($name in 'DWORD', 'WORD', 'BYTE', 'ULONG', 'BTH_ADDR')
     if (-not $match.Success) { throw "缺少 $name 的实际导出定义" }
     $definitions.Add($match.Value)
 }
-$systemtimeAlias = [regex]::Match($structs, '(?m)^ *typedef struct _SYSTEMTIME SYSTEMTIME;')
-if (-not $systemtimeAlias.Success) { throw 'SYSTEMTIME native typedef is missing' }
-$definitions.Add($systemtimeAlias.Value)
 foreach ($name in '_SYSTEMTIME', '_BLUETOOTH_ADDRESS', '_BLUETOOTH_LOCAL_SERVICE_INFO', '_BLUETOOTH_DEVICE_INFO')
 {
     $match = [regex]::Match($structs, "(?m)^ *(?:typedef )?struct $name\s*\{")
@@ -71,7 +70,9 @@ foreach ($name in '_SYSTEMTIME', '_BLUETOOTH_ADDRESS', '_BLUETOOTH_LOCAL_SERVICE
     if ($depth -ne 0) { throw "$name 结构定义不完整" }
     $position = $structs.IndexOf(';', $position)
     if ($position -lt 0) { throw "$name 缺少声明结束符" }
-    $definitions.Add($structs.Substring($match.Index, $position + 1 - $match.Index))
+    $definition = $structs.Substring($match.Index, $position + 1 - $match.Index)
+    if ($name -eq '_SYSTEMTIME' -and $definition -notmatch '(?s)^\s*typedef struct _SYSTEMTIME\s*\{.*\}\s*SYSTEMTIME;') { throw 'SYSTEMTIME 完整定义必须保留真实 typedef' }
+    $definitions.Add($definition)
 }
 [IO.File]::WriteAllLines((Join-Path $output 'NativeRecordLayouts.h'), $definitions)
 

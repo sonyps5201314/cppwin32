@@ -25,6 +25,9 @@ try
 }
 finally { Pop-Location }
 
+& python (Join-Path $PSScriptRoot '..\AuditForwardDeclarations.py') --headers (Join-Path $output 'headers\win32') --output (Join-Path $output 'forward-declarations.json')
+if ($LASTEXITCODE -ne 0) { throw '测试头文件存在同一条件和有效架构内的重复前置声明或 typedef' }
+
 foreach ($header in Get-ChildItem -LiteralPath (Join-Path $output 'headers\win32\impl') -Filter '*.0.h' -File)
 {
     if ([IO.File]::ReadAllText($header.FullName) -match '#include "win32/base\.h"\s*WIN32_EXPORT namespace [A-Za-z_][A-Za-z_0-9:]*\s*\{\s*\}') { throw "没有配置常量时不应输出空命名空间：$($header.Name)" }

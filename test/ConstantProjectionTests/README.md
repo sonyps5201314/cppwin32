@@ -46,6 +46,8 @@
 
 输出按记录归属组织：完整定义旁保留记录和指针别名；条件类型关系就近分组；遮蔽原有类型或标签的宏放到公开分区声明末尾。测试要求不存在 native_declarations.h、native_aliases.h，也不通过 push_macro/pop_macro 修补自身顺序。IncludeOrder.cpp 反向包含消费者和提供者，imports/SdkConfiguration.cpp 提前包含真实 SDK 配置头。宏冲突负例继续检查 C4005，真实类型宏不套 #ifndef。
 
+`test/AuditForwardDeclarations.py` 逐个 `.0.h` 检查相同命名空间、条件和有效架构下的重复前置声明、typedef 及命名回调；不会把不同架构或 ANSI/Unicode 分支视为重复。合成测试和真实 SDK 前置声明测试都会运行此检查。`test/AuditForwardDeclarationsTests.py` 验证检查器能识别架构交集，同时保留互斥分支和不同命名空间。结构体完整定义旁保留的别名仍由布局检查验证。
+
 imports/SdkConfiguration.cpp 验证 SDK 配置头提前包含的兼容性。test/ConfigurationHeaders/Run.ps1 验证版本、分区和用户覆盖；test/AuditSdkConfiguration.py 检查两个 SDK 配置头只在 base.h 以指定绝对路径引用。
 
 导出时增加 `-contracts <文件路径>` 会生成复杂原生声明、所有条件别名和单分支原名的编译检查，并生成同名 .aliases.tsv 归属清单。将检查头通过本脚本 `-NativeContracts <文件路径>` 传入，可在 x64/x86 符号工程中同时编译。test/AuditDeclarationLayout.py 将归属清单与实际完整定义旁的别名核对，并检查旧辅助头、旧 include 及宏保护序列是否归零。默认发射器为已构建的 Release/net10.0/ClangSharpSourceToWinmd.exe；可用 `-Emitter` 指定其他路径。

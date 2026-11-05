@@ -2,11 +2,8 @@
 
 namespace cppwin32
 {
-    static void write_namespace_0_h(std::string_view const& ns, cache::namespace_members const& members)
+    static void write_namespace_0_body(writer& w, cache::namespace_members const& members)
     {
-        writer w;
-        w.type_namespace = ns;
-
         {
             w.write("#pragma region enums\n");
             w.write_each<write_enum>(members.enums);
@@ -21,7 +18,7 @@ namespace cppwin32
                     write_related_aliases(w, type);
                     write_owner_conditionals(w, type);
                 }
-            if (auto found = namespace_native_aliases.find(ns); found != namespace_native_aliases.end())
+            if (auto found = namespace_native_aliases.find(w.type_namespace); found != namespace_native_aliases.end())
                 for (auto const& alias : found->second) write_native_alias(w, alias);
             w.write("#pragma endregion forward_declarations\n\n");
 
@@ -37,8 +34,20 @@ namespace cppwin32
             w.write("#pragma endregion guids\n\n");
         }
 
-        write_close_file_guard(w);
-        w.swap();
+    }
+
+    static void write_namespace_0_h(std::string_view const& ns, cache::namespace_members const& members)
+    {
+        // 先收集依赖，再按最终文件顺序记录已输出的声明。
+        writer dependencies;
+        dependencies.type_namespace = ns;
+        write_namespace_0_body(dependencies, members);
+
+        writer w;
+        w.type_namespace = ns;
+        w.depends = std::move(dependencies.depends);
+        w.extern_depends = std::move(dependencies.extern_depends);
+        w.native_namespace_dependencies = std::move(dependencies.native_namespace_dependencies);
 
         write_preamble(w);
         write_open_file_guard(w, ns, '0');
@@ -53,6 +62,8 @@ namespace cppwin32
         write_dependency_forwards(w);
         for (auto dependency : w.native_namespace_dependencies) if (dependency != ns) w.write_depends(dependency, '0');
 
+        write_namespace_0_body(w, members);
+        write_close_file_guard(w);
         w.save_header('0');
     }
 
