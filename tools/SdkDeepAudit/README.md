@@ -1,5 +1,7 @@
 # SDK AST 深度自校验
 
+2026-11-05 本地整改工作已结项归档；遗留问题、候选清单、已确认实例和稳定报告位置见 [归档说明](../../docs/archives/2026-11-05-cppwin32/README.md)。保留本工具供参考和复现，不自动继续整改生成链路。
+
 本工具将导出头文件与 `win32metadata/generation/WinSDK/RecompiledIdlHeaders` 分别解析为 Clang AST，查找对应声明并统计布局、签名、名称写法和常量值的差异。使用本机 ClangSharp 编译产物中的 `ClangSharp.Interop.dll`、`libclang.dll`、`libClangSharp.dll`；不修改 SDK、WinMD 或导出头文件。
 
 ## 运行

@@ -1,5 +1,7 @@
 # The C++ Windows SDK projection
 
+> **本地工作归档（2026-11-05）**：本地 cppwin32 后续整改已按用户决定停止。剩余问题、已确认布局缺陷、完整待查索引和报告位置见 [结项归档](docs/archives/2026-11-05-cppwin32/README.md)。当前输出没有通过与 Windows SDK 完全等价的验收。
+
 C++/Win32 (cppwin32) is a standard C++ language projection for Windows SDK APIs. True, the Windows SDK already releases headers that can be consumed from C++, but those headers have some severe historical and compatiblity constraints that hamper C++ developers that wish to enjoy modern language features. Goals include:
 - Better compliance with C++ standards, particularly C++17 and newer.
 - Eliminating the use of macros for constants, enumerations, and functions, and instead using C++ language constructs that participate in the type system and respect scope.

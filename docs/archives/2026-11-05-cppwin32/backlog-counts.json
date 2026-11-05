@@ -1,0 +1,86 @@
+{
+  "configuration_order": [
+    "x86-Ansi",
+    "x86-Unicode",
+    "x64-Ansi",
+    "x64-Unicode",
+    "arm64-Ansi",
+    "arm64-Unicode"
+  ],
+  "unique_archive_rows": 180921,
+  "configuration_rows": {
+    "x86-Ansi": {
+      "rows": 177154,
+      "statuses": {
+        "unverified": 9595,
+        "different": 142449,
+        "unmatched": 13321,
+        "ambiguous": 6812,
+        "macro_partially_verified": 872,
+        "macro_value_unverified": 3929,
+        "ambiguous_macro": 176
+      }
+    },
+    "x86-Unicode": {
+      "rows": 174501,
+      "statuses": {
+        "unverified": 9594,
+        "different": 139934,
+        "unmatched": 13415,
+        "ambiguous": 6706,
+        "macro_partially_verified": 872,
+        "macro_value_unverified": 3929,
+        "ambiguous_macro": 51
+      }
+    },
+    "x64-Ansi": {
+      "rows": 176598,
+      "statuses": {
+        "unverified": 9595,
+        "different": 141516,
+        "unmatched": 13827,
+        "ambiguous": 6666,
+        "macro_partially_verified": 875,
+        "macro_value_unverified": 3943,
+        "ambiguous_macro": 176
+      }
+    },
+    "x64-Unicode": {
+      "rows": 173947,
+      "statuses": {
+        "unverified": 9594,
+        "different": 139003,
+        "unmatched": 13921,
+        "ambiguous": 6560,
+        "macro_partially_verified": 875,
+        "macro_value_unverified": 3943,
+        "ambiguous_macro": 51
+      }
+    },
+    "arm64-Ansi": {
+      "rows": 176356,
+      "statuses": {
+        "unverified": 9595,
+        "different": 141506,
+        "unmatched": 13598,
+        "ambiguous": 6664,
+        "macro_partially_verified": 873,
+        "macro_value_unverified": 3943,
+        "ambiguous_macro": 177
+      }
+    },
+    "arm64-Unicode": {
+      "rows": 173705,
+      "statuses": {
+        "unverified": 9594,
+        "different": 138993,
+        "unmatched": 13692,
+        "ambiguous": 6558,
+        "macro_partially_verified": 873,
+        "macro_value_unverified": 3943,
+        "ambiguous_macro": 52
+      }
+    }
+  },
+  "meaning": "同一状态、符号、差异类别及双侧位置的记录跨配置合并；不是已确认独立缺陷数量"
+}

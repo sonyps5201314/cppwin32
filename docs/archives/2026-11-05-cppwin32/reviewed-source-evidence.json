@@ -1,0 +1,87 @@
+[
+  {
+    "name": "CLS_SCAN_CONTEXT",
+    "sdk": {
+      "file": "L:\\Open_Code\\win32metadata\\generation\\WinSDK\\RecompiledIdlHeaders\\shared\\clfs.h",
+      "file_sha256": "5df56e8236da0be4805bab9964a44f3b61a69061c5463ba9050b5ae3c2bf47b7",
+      "first_line": 814,
+      "last_line": 826,
+      "text": "typedef struct _CLS_SCAN_CONTEXT\n{\n    CLFS_NODE_ID cidNode;\n    HANDLE hLog;\n    __declspec(align(8)) ULONG cIndex;\n    __declspec(align(8)) ULONG cContainers;\n    __declspec(align(8)) ULONG cContainersReturned;\n    __declspec(align(8)) CLFS_SCAN_MODE eScanMode;\n    __declspec(align(8)) PCLS_CONTAINER_INFORMATION pinfoContainer;\n    \n} CLS_SCAN_CONTEXT, *PCLS_SCAN_CONTEXT, **PPCLS_SCAN_CONTEXT;\n#endif /* NTDDI_VERSION || _WIN32_WINNT */\n"
+    },
+    "projection": {
+      "file": "Z:\\ms\\win32\\impl\\complex_structs.h",
+      "file_sha256": "71d5510f2aa6a7c174b6b0d8bf10a2652679e661105003b8170a8a886add44b8",
+      "first_line": 64435,
+      "last_line": 64445,
+      "text": "    typedef struct _CLS_SCAN_CONTEXT\n    {\n        CLFS_NODE_ID cidNode;\n        HANDLE hLog;\n        ULONG cIndex;\n        ULONG cContainers;\n        ULONG cContainersReturned;\n        CLFS_SCAN_MODE eScanMode;\n        PCLS_CONTAINER_INFORMATION pinfoContainer;\n    } CLS_SCAN_CONTEXT, CLFS_SCAN_CONTEXT;\n    typedef CLS_SCAN_CONTEXT* PCLFS_SCAN_CONTEXT;"
+    }
+  },
+  {
+    "name": "CONFIGURATION_ENTRY",
+    "sdk": {
+      "file": "L:\\Open_Code\\win32metadata\\generation\\WinSDK\\RecompiledIdlHeaders\\um\\ftpext.h",
+      "file_sha256": "4392249f5ee988c3e1116fafdb68adac6e3aaf5b0da983fe766e78db80d9612c",
+      "first_line": 198,
+      "last_line": 203,
+      "text": "/* [uuid] */ struct  DECLSPEC_UUID(\"9e04226f-e38c-419e-a448-62de3b3a8f43\") CONFIGURATION_ENTRY\n    {\n    BSTR bstrKey;\n    BSTR bstrValue;\n    } ;\n"
+    },
+    "projection": {
+      "file": "Z:\\ms\\win32\\impl\\complex_interfaces.h",
+      "file_sha256": "ec11b9d9a80cbc28244c7cc327fb606376532b2359b18164ff17dff1fb23ed1f",
+      "first_line": 22021,
+      "last_line": 22023,
+      "text": "    struct __declspec(uuid(\"9E04226F-E38C-419E-A448-62DE3B3A8F43\")) __declspec(novtable) CONFIGURATION_ENTRY\n    {\n    };"
+    }
+  },
+  {
+    "name": "MFASYNCRESULT",
+    "sdk": {
+      "file": "L:\\Open_Code\\win32metadata\\generation\\WinSDK\\RecompiledIdlHeaders\\um\\mfapi.h",
+      "file_sha256": "454652a6c9e35c149410e77fb001101dd33486c29d71b009929fab467c129e4e",
+      "first_line": 380,
+      "last_line": 388,
+      "text": "typedef struct tagMFASYNCRESULT : public IMFAsyncResult\n{\n    OVERLAPPED overlapped;\n    IMFAsyncCallback * pCallback;\n    HRESULT hrStatusResult;\n    DWORD dwBytesTransferred;\n    HANDLE hEvent;\n}   MFASYNCRESULT;\n#else /* C style interface */"
+    },
+    "projection": {
+      "file": "Z:\\ms\\win32\\impl\\complex_interfaces.h",
+      "file_sha256": "ec11b9d9a80cbc28244c7cc327fb606376532b2359b18164ff17dff1fb23ed1f",
+      "first_line": 71315,
+      "last_line": 71317,
+      "text": "    struct __declspec(novtable) MFASYNCRESULT : IMFAsyncResult\n    {\n    };"
+    }
+  },
+  {
+    "name": "OLD_LARGE_INTEGER",
+    "sdk": {
+      "file": "L:\\Open_Code\\win32metadata\\generation\\WinSDK\\RecompiledIdlHeaders\\um\\subauth.h",
+      "file_sha256": "971b177c8b095435d423cf34c95bcbd79c93c3ffe265a0e746d385f1da8ef1c3",
+      "first_line": 47,
+      "last_line": 50,
+      "text": "typedef struct _OLD_LARGE_INTEGER {\n    ULONG LowPart;\n    LONG HighPart;\n} OLD_LARGE_INTEGER, *POLD_LARGE_INTEGER;"
+    },
+    "projection": {
+      "file": "Z:\\ms\\win32\\impl\\complex_structs.h",
+      "file_sha256": "71d5510f2aa6a7c174b6b0d8bf10a2652679e661105003b8170a8a886add44b8",
+      "first_line": 82363,
+      "last_line": 82363,
+      "text": "    typedef long long OLD_LARGE_INTEGER;"
+    }
+  },
+  {
+    "name": "NETLOGON_LOGON_IDENTITY_INFO",
+    "sdk": {
+      "file": "L:\\Open_Code\\win32metadata\\generation\\WinSDK\\RecompiledIdlHeaders\\um\\subauth.h",
+      "file_sha256": "971b177c8b095435d423cf34c95bcbd79c93c3ffe265a0e746d385f1da8ef1c3",
+      "first_line": 243,
+      "last_line": 250,
+      "text": "typedef struct _NETLOGON_LOGON_IDENTITY_INFO {\n    UNICODE_STRING LogonDomainName;\n    ULONG ParameterControl;\n    OLD_LARGE_INTEGER  LogonId;\n    UNICODE_STRING UserName;\n    UNICODE_STRING Workstation;\n} NETLOGON_LOGON_IDENTITY_INFO,\n *PNETLOGON_LOGON_IDENTITY_INFO;"
+    },
+    "projection": {
+      "file": "Z:\\ms\\win32\\impl\\complex_structs.h",
+      "file_sha256": "71d5510f2aa6a7c174b6b0d8bf10a2652679e661105003b8170a8a886add44b8",
+      "first_line": 82364,
+      "last_line": 82371,
+      "text": "    typedef struct _NETLOGON_LOGON_IDENTITY_INFO\n    {\n        UNICODE_STRING LogonDomainName;\n        ULONG ParameterControl;\n        OLD_LARGE_INTEGER LogonId;\n        UNICODE_STRING UserName;\n        UNICODE_STRING Workstation;\n    } NETLOGON_LOGON_IDENTITY_INFO;"
+    }
+  }
+]

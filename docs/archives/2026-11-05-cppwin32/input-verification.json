@@ -1,0 +1,15 @@
+{
+  "input_fingerprint": "702fb980807eef0ecfcf5d72ba678aab93d0c35624f686e35030efdb52519a7e",
+  "files": 4305,
+  "changed_inputs": [],
+  "exported_headers": 1308,
+  "configurations": 6,
+  "sdk_units_per_configuration": [
+    400,
+    400,
+    400,
+    400,
+    400,
+    400
+  ]
+}
