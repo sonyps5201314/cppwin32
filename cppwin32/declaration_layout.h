@@ -311,11 +311,15 @@ namespace cppwin32
 
     void write_configuration_constants(writer& w, cache::namespace_members const& members)
     {
-        auto guard = wrap_type_namespace(w, w.type_namespace);
+        std::vector<Field> fields;
         for (auto const& type : members.classes)
             for (auto const& field : type.FieldList())
                 if (field.Flags().Literal() && is_configuration_constant(field.Name()))
-                    w.write("#ifndef %\n    inline constexpr % % = %;\n#endif\n", field.Name(), field.Constant().Type(), field.Name(), field.Constant());
+                    fields.push_back(field);
+        if (fields.empty()) return;
+        auto guard = wrap_type_namespace(w, w.type_namespace);
+        for (auto const& field : fields)
+            w.write("#ifndef %\n    inline constexpr % % = %;\n#endif\n", field.Name(), field.Constant().Type(), field.Name(), field.Constant());
     }
 
     void write_dependency_forwards(writer& w)

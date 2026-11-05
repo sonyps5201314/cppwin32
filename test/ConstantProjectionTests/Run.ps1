@@ -25,6 +25,11 @@ try
 }
 finally { Pop-Location }
 
+foreach ($header in Get-ChildItem -LiteralPath (Join-Path $output 'headers\win32\impl') -Filter '*.0.h' -File)
+{
+    if ([IO.File]::ReadAllText($header.FullName) -match '#include "win32/base\.h"\s*WIN32_EXPORT namespace [A-Za-z_][A-Za-z_0-9:]*\s*\{\s*\}') { throw "没有配置常量时不应输出空命名空间：$($header.Name)" }
+}
+
 $nativeDefinitions = [IO.File]::ReadAllText((Join-Path $output 'headers\win32\impl\complex_structs.h'))
 if ($nativeDefinitions -notmatch 'SDK_OTHER_ALIAS\* NamedAlias;') { throw 'SDK record alias spelling was lost' }
 foreach ($pair in @(@('_SDK_RECORD','SDK_RECORD_STRUCT'), @('_MethodRecord','MethodRecord')))
