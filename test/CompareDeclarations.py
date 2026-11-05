@@ -35,7 +35,7 @@ def catalog(root):
                 if namespace:
                     base_partition = namespace[1].replace('::', '.')
                     base_partition_depth = depth + 1
-            record = re.match(r"\s*(?:typedef\s+)?(struct|union|enum(?: class)?)\s+(?:__declspec\([^)]*\)\s+)?(\w+)(?:\s*[:{]|\s*$)", line)
+            record = re.match(r"\s*(?:typedef\s+)?(struct|union|enum(?: class)?)\s+(?:__declspec\((?:[^()]|\([^()]*\))*\)\s+)*(\w+)(?:\s*[:{]|\s*$)", line)
             if record:
                 pending = (record[1], record[2])
             owner = "::".join(item[1] for item in stack)

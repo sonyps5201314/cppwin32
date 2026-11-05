@@ -91,7 +91,7 @@ if (-not $trust.Success) { throw '缺少 TrustLevel 的实际定义' }
 $callbackDefinitions.Add($trust.Value)
 foreach ($name in 'IUnknown','IInspectable','IWindowsDevicesAllJoynBusObjectInterop')
 {
-    $match = [regex]::Match($interfaces, "(?ms)^ *struct __declspec\(novtable\) $name\b[^}]+};")
+    $match = [regex]::Match($interfaces, "(?ms)^ *struct (?:__declspec\((?:[^()]|\([^()]*\))*\)\s+)+$name\b[^}]+};")
     if (-not $match.Success) { throw "缺少 $name 的实际导出定义" }
     $callbackDefinitions.Add($match.Value)
 }

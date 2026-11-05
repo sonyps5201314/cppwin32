@@ -331,7 +331,7 @@ namespace cppwin32
 	}
 
 	template <typename T>
-	auto get_attribute_guid(T const& row)
+	auto get_attribute_guid(T const& row, bool uuid = false)
     {
         std::string result;
 		auto attribute = get_attribute(row, "Windows.Win32.Foundation.Metadata", "GuidAttribute");
@@ -365,7 +365,9 @@ namespace cppwin32
 		};
 
 		char buffer[128];
-        size_t const size = sprintf_s(buffer, "0x%08X,0x%04X,0x%04X,{ 0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X }",
+        size_t const size = sprintf_s(buffer, uuid
+            ? "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X"
+            : "0x%08X,0x%04X,0x%04X,{ 0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X }",
             g.Data1,
             g.Data2,
             g.Data3,

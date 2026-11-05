@@ -109,6 +109,8 @@ typedef struct _GUID {
 #endif
 #endif
 
+typedef GUID IID;
+
 #ifdef __IUnknown_INTERFACE_DEFINED__
 #define WIN32_IMPL_IUNKNOWN_DEFINED
 #endif
@@ -264,11 +266,11 @@ namespace win32::_impl_
     };
 
     template <typename T>
-#ifdef WIN32_IMPL_IUNKNOWN_DEFINED
-    inline constexpr guid guid_v{ (PSDK::GUID&)__uuidof(T) };
-#else
-    inline constexpr guid guid_v{};
-#endif
+    inline constexpr guid guid_v{
+        __uuidof(T).Data1, __uuidof(T).Data2, __uuidof(T).Data3,
+        { __uuidof(T).Data4[0], __uuidof(T).Data4[1], __uuidof(T).Data4[2], __uuidof(T).Data4[3],
+          __uuidof(T).Data4[4], __uuidof(T).Data4[5], __uuidof(T).Data4[6], __uuidof(T).Data4[7] }
+    };
 
     template <typename T>
     constexpr auto to_underlying_type(T const value) noexcept

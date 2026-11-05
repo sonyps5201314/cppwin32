@@ -53,6 +53,11 @@ typedef RECORD* PRECORD;
 typedef int (__stdcall * Callback) (PRECORD value);''')
         self.assertEqual(result['duplicate_pairs'], 2)
 
+    def test_uuid_forward_declarations(self):
+        result = self.check_headers('''struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) IUnknown;
+struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) IUnknown;''')
+        self.assertEqual(result['duplicate_declarations'], 1)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -27,8 +27,6 @@ namespace cppwin32
             w.write("#pragma endregion delegates\n\n");
         }
         {
-            auto wrap = wrap_impl_namespace(w);
-
             w.write("#pragma region guids\n");
             w.write_each<write_guid>(members.interfaces);
             w.write("#pragma endregion guids\n\n");

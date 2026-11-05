@@ -190,6 +190,13 @@ namespace cppwin32
         w.write(format, type.TypeDisplayName());
     }
 
+    void write_interface_uuid(writer& w, TypeDef const& type)
+    {
+        if (get_category(type) != category::interface_type) return;
+        auto uuid = get_attribute_guid(type, true);
+        if (!uuid.empty()) w.write("__declspec(uuid(\"%\")) ", uuid);
+    }
+
     void write_forward(writer& w, TypeDef const& type)
     {
         auto supported = GetSupportedArchitectures(type);
@@ -247,18 +254,16 @@ namespace cppwin32
 			check_for_write_defined_arches__part_head(w, arches);
 
 			std::string_view const type_keyword = is_union(type) ? "union" : "struct";
-			auto format = R"(    % %;
-)";
 
 			auto const origin = get_native_record_origin(type);
             if (!origin.present)
             {
-                w.write(format, type_keyword, type.TypeDisplayName());
+                w.write("    % %%;\n", type_keyword, bind<write_interface_uuid>(type), type.TypeDisplayName());
             }
             else
             {
                 auto const tag = origin.tag.empty() ? origin.typedefs.front() : origin.tag;
-                w.write(format, type_keyword, tag);
+                w.write("    % %%;\n", type_keyword, bind<write_interface_uuid>(type), tag);
                 for (auto name : origin.typedefs)
                 {
                     if (name != tag && can_write_native_typedef(type, name))
@@ -1570,12 +1575,13 @@ namespace cppwin32
             return;
         }
 
-        auto format = R"(    template <> inline constexpr guid guid_v<%>{ % };
-)";
-
-        w.write(format,
-            type,
-            guid_str);
+        auto arches = GetSupportedArchitectures(type);
+        check_for_write_defined_arches__part_head(w, arches);
+        {
+            auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
+            w.write("    inline constexpr IID IID_% = { % };\n", get_cpp_type_name(type), guid_str);
+        }
+        check_for_write_defined_arches__part_tail(w, arches);
     }
 
     void write_base_interface(writer& w, TypeDef const& type)
@@ -1592,10 +1598,10 @@ namespace cppwin32
 		auto guard = wrap_type_namespace(w, type.TypeNamespace(), IsHiddenTypeNamespace(type));
 
         {
-            auto const format = R"(    struct __declspec(novtable) %%
+            auto const format = R"(    struct %__declspec(novtable) %%
     {
 )";
-            w.write(format, type.TypeDisplayName(), bind<write_base_interface>(type));
+            w.write(format, bind<write_interface_uuid>(type), type.TypeDisplayName(), bind<write_base_interface>(type));
         }
 
         auto const format = R"(        virtual % __stdcall %(%) noexcept = 0;

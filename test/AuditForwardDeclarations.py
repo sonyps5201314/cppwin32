@@ -48,7 +48,7 @@ def audit(headers):
             match = re.match(r'(?:WIN32_EXPORT )?namespace ([\w:]+)', text)
             if match:
                 namespace, namespace_depth = match[1], depth + 1
-            declaration = re.fullmatch(r'(?:(?:struct|union) \w+|typedef [^{}]+|using \w+\s*=\s*[^{}]+);', text)
+            declaration = re.fullmatch(r'(?:(?:struct|union) (?:__declspec\((?:[^()]|\([^()]*\))*\)\s+)*\w+|typedef [^{}]+|using \w+\s*=\s*[^{}]+);', text)
             if declaration:
                 mask, other = 7, []
                 for condition in conditions:
